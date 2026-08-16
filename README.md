@@ -1,4 +1,4 @@
-# Index
+# Lemonade
 
 A shared recipe app for two people. Next.js 16 (App Router) · Supabase · Tailwind v4 · Claude.
 
@@ -65,7 +65,7 @@ appended to `notes`.
 
 ## Design
 
-The "Index" direction: ledger-paper ground, chunky grotesque display over a
+The "Lemonade" direction: ledger-paper ground, chunky grotesque display over a
 serif body, pen-blue accent used at most once per screen, monospaced tabular
 quantities. All tokens live in `app/globals.css` — derive from them rather than
 hardcoding values.

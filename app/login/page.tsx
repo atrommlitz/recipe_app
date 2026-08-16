@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink">
-            Index
+            Lemonade
           </h1>
           <p className="mt-1 text-ink-mute">Our recipes, in one place.</p>
         </div>

@@ -359,6 +359,28 @@ export function RecipeBrowser({
         </div>
 
         <div className="flex items-center gap-3 text-sm">
+          {selecting ? (
+            <button
+              type="button"
+              onClick={endSelecting}
+              className="text-ink-mute hover:text-ink"
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSelecting(true)}
+              className="text-ink-mute hover:text-accent"
+            >
+              Select
+            </button>
+          )}
+
+          <Link href="/pick" className="text-accent hover:underline">
+            Pick one
+          </Link>
+
           {/* View toggle */}
           <div
             role="group"
@@ -395,28 +417,6 @@ export function RecipeBrowser({
               </button>
             ))}
           </div>
-
-          <Link href="/pick" className="text-accent hover:underline">
-            Pick one
-          </Link>
-
-          {selecting ? (
-            <button
-              type="button"
-              onClick={endSelecting}
-              className="text-ink-mute hover:text-ink"
-            >
-              Cancel
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setSelecting(true)}
-              className="text-ink-mute hover:text-accent"
-            >
-              Select
-            </button>
-          )}
         </div>
       </div>
 

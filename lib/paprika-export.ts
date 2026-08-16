@@ -56,7 +56,7 @@ export function toPaprikaJson(recipe: ExportableRecipe): Record<string, unknown>
     servings: recipe.servings ? String(recipe.servings) : "",
     prep_time: formatMinutes(recipe.prep_time_minutes),
     cook_time: formatMinutes(recipe.cook_time_minutes),
-    source: recipe.source_url ? new URL(recipe.source_url).hostname : "Index",
+    source: recipe.source_url ? new URL(recipe.source_url).hostname : "Lemonade",
     source_url: recipe.source_url ?? "",
     image_url: recipe.image_url ?? "",
     // Our tags map onto Paprika's free-form category folders.
@@ -111,7 +111,7 @@ function detach(view: Uint8Array): Uint8Array<ArrayBuffer> {
  */
 export function toPaprikaArchive(
   recipes: ExportableRecipe[],
-  name = "Index recipes",
+  name = "Lemonade recipes",
 ): File {
   const entries: Record<string, Uint8Array> = {}
   const used = new Map<string, number>()

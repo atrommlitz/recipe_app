@@ -27,12 +27,12 @@ const plexMono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: { default: "Index", template: "%s · Index" },
+  title: { default: "Lemonade", template: "%s · Lemonade" },
   description: "Our recipes, in one place.",
-  applicationName: "Index",
+  applicationName: "Lemonade",
   appleWebApp: {
     capable: true,
-    title: "Index",
+    title: "Lemonade",
     statusBarStyle: "default",
   },
   // Favicon and apple-touch-icon come from app/icon.png and app/apple-icon.png

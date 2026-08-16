@@ -18,7 +18,7 @@ export function SiteHeader({ email }: { email: string }) {
           href="/"
           className="font-display text-lg font-extrabold tracking-tight text-ink"
         >
-          Index
+          Lemonade
         </Link>
 
         {/* Adding lives entirely on the + button on the home grid — no
