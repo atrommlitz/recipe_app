@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline · Index</title>
+    <style>
+      :root { --ground: #e9e6db; --ink: #171a1d; --ink-mute: #5c5a54; --accent: #1f4b99; }
+      @media (prefers-color-scheme: dark) {
+        :root { --ground: #1a1917; --ink: #e9e6db; --ink-mute: #9a958a; --accent: #6e9be0; }
+      }
+      * { margin: 0; box-sizing: border-box; }
+      body {
+        min-height: 100dvh;
+        display: grid; place-items: center;
+        padding: 2rem;
+        background: var(--ground);
+        color: var(--ink);
+        font-family: ui-serif, Georgia, serif;
+        text-align: center;
+      }
+      h1 { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1.75rem; letter-spacing: -0.02em; }
+      p { margin-top: 0.5rem; color: var(--ink-mute); }
+      button {
+        margin-top: 1.5rem; padding: 0.5rem 1rem;
+        border: 0; border-radius: 2px;
+        background: var(--accent); color: var(--ground);
+        font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>No connection</h1>
+      <p>Index needs the network to load recipes. Try again once you&rsquo;re back online.</p>
+      <button onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

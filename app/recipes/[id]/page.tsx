@@ -1,0 +1,122 @@
+import Image from "next/image"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+
+import { RecipeScaler } from "@/components/RecipeScaler"
+import { createClient } from "@/lib/supabase/server"
+import { formatMinutes } from "@/lib/format"
+import type { Ingredient, Recipe, Step } from "@/lib/database.types"
+
+type FullRecipe = Recipe & { ingredients: Ingredient[]; steps: Step[] }
+
+async function getRecipe(id: string): Promise<FullRecipe | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("recipes")
+    .select("*, ingredients(*), steps(*)")
+    .eq("id", id)
+    .order("sort_order", { referencedTable: "ingredients", ascending: true })
+    .order("step_number", { referencedTable: "steps", ascending: true })
+    .maybeSingle()
+
+  return (data as FullRecipe | null) ?? null
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/recipes/[id]">): Promise<Metadata> {
+  const { id } = await params
+  const recipe = await getRecipe(id)
+  return { title: recipe?.title ?? "Recipe" }
+}
+
+export default async function RecipePage({ params }: PageProps<"/recipes/[id]">) {
+  const { id } = await params
+  const recipe = await getRecipe(id)
+
+  if (!recipe) notFound()
+
+  const meta = [
+    recipe.servings ? `Serves ${recipe.servings}` : null,
+    recipe.prep_time_minutes ? `${formatMinutes(recipe.prep_time_minutes)} prep` : null,
+    recipe.cook_time_minutes ? `${formatMinutes(recipe.cook_time_minutes)} cook` : null,
+  ].filter(Boolean)
+
+  return (
+    <article className="pb-safe">
+      {recipe.image_url ? (
+        <div className="relative aspect-[16/10] w-full bg-card sm:aspect-[21/9]">
+          <Image
+            src={recipe.image_url}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
+      ) : null}
+
+      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        <header className="border-b border-rule pb-5">
+          <h1 className="font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-4xl">
+            {recipe.title}
+          </h1>
+
+          {meta.length > 0 ? (
+            <p className="tnum mt-2 text-xs text-ink-mute">{meta.join("  ·  ")}</p>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <Link href={`/recipes/${recipe.id}/edit`} className="text-accent hover:underline">
+              Edit
+            </Link>
+            {recipe.source_url ? (
+              <a
+                href={recipe.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-mute hover:text-ink"
+              >
+                Source ↗
+              </a>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="mt-8">
+          <RecipeScaler ingredients={recipe.ingredients} servings={recipe.servings} />
+        </div>
+
+        {recipe.steps.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="eyebrow !text-ink-mute mb-3">Method</h2>
+            <ol className="border-t border-rule">
+              {recipe.steps.map((step, index) => (
+                <li
+                  key={step.id}
+                  className="flex gap-4 border-b border-rule py-4"
+                >
+                  <span className="tnum shrink-0 pt-0.5 text-sm text-accent">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p className="min-w-0 flex-1 leading-relaxed text-ink">
+                    {step.instruction}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+
+        {recipe.notes ? (
+          <section className="mt-10">
+            <h2 className="eyebrow !text-ink-mute mb-3">Notes</h2>
+            <p className="whitespace-pre-wrap leading-relaxed text-ink">{recipe.notes}</p>
+          </section>
+        ) : null}
+      </div>
+    </article>
+  )
+}
