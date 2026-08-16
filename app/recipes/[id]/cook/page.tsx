@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
 import { CookMode } from "@/components/CookMode"
+import { MULTIPLIERS } from "@/components/RecipeScaler"
 import { createClient } from "@/lib/supabase/server"
 import type { Ingredient, Recipe, Step } from "@/lib/database.types"
 
@@ -15,8 +16,9 @@ export default async function CookPage({ params, searchParams }: PageProps<"/rec
 
   const rawScale = Array.isArray(search?.scale) ? search.scale[0] : search?.scale
   const parsed = Number(rawScale)
-  // Carry through whatever multiplier was active on the detail view.
-  const multiplier = [1, 2, 3, 4].includes(parsed) ? parsed : 1
+  // Carry through whatever multiplier was active on the detail view. Anything
+  // outside the toggle's own values falls back to the recipe as written.
+  const multiplier = (MULTIPLIERS as readonly number[]).includes(parsed) ? parsed : 1
 
   const supabase = await createClient()
   const { data } = await supabase

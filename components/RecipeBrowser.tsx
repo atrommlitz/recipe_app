@@ -1,32 +1,65 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { AddRecipeButton } from "@/components/AddRecipeButton"
 import { MethodToggle } from "@/components/MethodChip"
-import { RecipeCard } from "@/components/RecipeCard"
+import { RecipeCard, type ViewMode } from "@/components/RecipeCard"
 import { Toast, useToast } from "@/components/Toast"
 import { buttonPrimary, buttonQuiet, inputClass } from "@/components/ui"
+import { deleteRecipe } from "@/app/recipes/actions"
 import { buildGroceryList, copyText } from "@/lib/grocery"
+import { inferProteins, PROTEIN_GROUPS, type ProteinGroup } from "@/lib/protein"
 import type { CookingMethod } from "@/lib/database.types"
 import type { GridRecipe } from "@/lib/queries"
 
+const VIEW_STORAGE_KEY = "index:view"
+
 /**
- * Search and filtering run over the already-loaded set rather than round
- * tripping to the server, so typing filters the grid on every keystroke.
+ * The layout preference lives in localStorage, which is an external store —
+ * reading it in an effect and calling setState would cause a cascading render
+ * on every visit. useSyncExternalStore reads it correctly and gives the server
+ * a defined snapshot to render, so there's no hydration mismatch either.
  */
+const viewListeners = new Set<() => void>()
+
+function subscribeToView(onChange: () => void) {
+  viewListeners.add(onChange)
+  window.addEventListener("storage", onChange)
+  return () => {
+    viewListeners.delete(onChange)
+    window.removeEventListener("storage", onChange)
+  }
+}
+
+function readView(): ViewMode {
+  return window.localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "grid"
+}
+
+function readServerView(): ViewMode {
+  return "grid"
+}
+
+function writeView(next: ViewMode) {
+  window.localStorage.setItem(VIEW_STORAGE_KEY, next)
+  for (const listener of viewListeners) listener()
+}
+
+/** Prep-time buckets, in minutes. 0 means no limit. */
+const PREP_BUCKETS = [
+  { label: "Any prep", max: 0 },
+  { label: "≤ 15 min", max: 15 },
+  { label: "≤ 30 min", max: 30 },
+  { label: "≤ 1 hr", max: 60 },
+] as const
+
 function matchesSearch(recipe: GridRecipe, terms: string[]): boolean {
   if (terms.length === 0) return true
-
-  const haystack = [
-    recipe.title,
-    ...recipe.ingredients.map((i) => i.item),
-  ]
+  const haystack = [recipe.title, ...recipe.ingredients.map((i) => i.item)]
     .join(" ")
     .toLowerCase()
-
-  // Every term must match somewhere — "chicken broccoli" means both.
   return terms.every((term) => haystack.includes(term))
 }
 
@@ -37,10 +70,17 @@ export function RecipeBrowser({
   recipes: GridRecipe[]
   methods: CookingMethod[]
 }) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+
   const [query, setQuery] = useState("")
   const [activeMethods, setActiveMethods] = useState<Set<string>>(new Set())
+  const [activeProteins, setActiveProteins] = useState<Set<ProteinGroup>>(new Set())
+  const [maxPrep, setMaxPrep] = useState<number>(0)
+  const view = useSyncExternalStore(subscribeToView, readView, readServerView)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [toast, setToast] = useToast()
 
   const terms = useMemo(
@@ -48,33 +88,48 @@ export function RecipeBrowser({
     [query],
   )
 
+  // Protein comes from the ingredient rows, so it's derived once per recipe
+  // rather than stored — see lib/protein.ts.
+  const proteinsById = useMemo(() => {
+    const map = new Map<string, ProteinGroup[]>()
+    for (const recipe of recipes) {
+      map.set(
+        recipe.id,
+        inferProteins(recipe.ingredients.map((i) => i.item)),
+      )
+    }
+    return map
+  }, [recipes])
+
   const visible = useMemo(
     () =>
       recipes.filter((recipe) => {
-        // OR across selected methods: show anything matching any of them.
         if (activeMethods.size > 0) {
-          const has = recipe.cooking_methods.some((m) => activeMethods.has(m.id))
-          if (!has) return false
+          if (!recipe.cooking_methods.some((m) => activeMethods.has(m.id))) return false
         }
+
+        if (activeProteins.size > 0) {
+          const proteins = proteinsById.get(recipe.id) ?? []
+          if (!proteins.some((p) => activeProteins.has(p))) return false
+        }
+
+        if (maxPrep > 0) {
+          // A recipe with no recorded prep time can't be claimed to be under
+          // the limit, so it drops out rather than being assumed quick.
+          if (recipe.prep_time_minutes === null) return false
+          if (recipe.prep_time_minutes > maxPrep) return false
+        }
+
         return matchesSearch(recipe, terms)
       }),
-    [recipes, activeMethods, terms],
+    [recipes, activeMethods, activeProteins, maxPrep, terms, proteinsById],
   )
 
-  function toggleMethod(id: string) {
-    setActiveMethods((current) => {
+  function toggle<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, value: T) {
+    setter((current) => {
       const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function toggleSelected(id: string) {
-    setSelected((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
       return next
     })
   }
@@ -83,11 +138,9 @@ export function RecipeBrowser({
     const chosen = recipes.filter((r) => selected.has(r.id))
     if (chosen.length === 0) return
 
-    const list = buildGroceryList(
-      chosen.map((r) => ({ title: r.title, ingredients: r.ingredients })),
+    const ok = await copyText(
+      buildGroceryList(chosen.map((r) => ({ title: r.title, ingredients: r.ingredients }))),
     )
-
-    const ok = await copyText(list)
     setToast(
       ok
         ? `Copied ${chosen.length === 1 ? "1 recipe" : `${chosen.length} recipes`} to clipboard`
@@ -99,11 +152,33 @@ export function RecipeBrowser({
     }
   }
 
-  const filtering = activeMethods.size > 0 || terms.length > 0
+  function handleDelete(id: string) {
+    const recipe = recipes.find((r) => r.id === id)
+    setDeletingId(id)
+    startTransition(async () => {
+      const result = await deleteRecipe(id)
+      setDeletingId(null)
+      if ("error" in result) {
+        setToast(result.error)
+        return
+      }
+      setToast(`Deleted ${recipe?.title ?? "recipe"}`)
+      router.refresh()
+    })
+  }
+
+  const filtering =
+    activeMethods.size > 0 || activeProteins.size > 0 || maxPrep > 0 || terms.length > 0
+
+  function clearFilters() {
+    setActiveMethods(new Set())
+    setActiveProteins(new Set())
+    setMaxPrep(0)
+    setQuery("")
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 pt-6 pb-28 sm:px-6">
-      {/* Search ------------------------------------------------------------ */}
       <div className="mb-3">
         <label htmlFor="search" className="sr-only">
           Search recipes and ingredients
@@ -118,38 +193,105 @@ export function RecipeBrowser({
         />
       </div>
 
-      {/* Method filters ---------------------------------------------------- */}
-      <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        {methods.map((method) => (
-          <MethodToggle
-            key={method.id}
-            name={method.name}
-            selected={activeMethods.has(method.id)}
-            onToggle={() => toggleMethod(method.id)}
-          />
-        ))}
-        {activeMethods.size > 0 ? (
-          <button
-            type="button"
-            onClick={() => setActiveMethods(new Set())}
-            className="ml-1 text-xs text-ink-mute hover:text-accent"
-          >
-            Clear
-          </button>
-        ) : null}
+      {/* Filters ------------------------------------------------------------ */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="eyebrow mr-1 w-14 shrink-0">Cooked</span>
+          {methods.map((method) => (
+            <MethodToggle
+              key={method.id}
+              name={method.name}
+              selected={activeMethods.has(method.id)}
+              onToggle={() => toggle(setActiveMethods, method.id)}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="eyebrow mr-1 w-14 shrink-0">Protein</span>
+          {PROTEIN_GROUPS.map((group) => (
+            <MethodToggle
+              key={group}
+              name={group}
+              selected={activeProteins.has(group)}
+              onToggle={() => toggle(setActiveProteins, group)}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="eyebrow mr-1 w-14 shrink-0">Prep</span>
+          {PREP_BUCKETS.map((bucket) => (
+            <MethodToggle
+              key={bucket.label}
+              name={bucket.label}
+              selected={maxPrep === bucket.max}
+              onToggle={() => setMaxPrep(bucket.max)}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Header row -------------------------------------------------------- */}
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-t border-rule pt-4">
-        <span className="tnum text-xs text-ink-mute">
-          {visible.length} {visible.length === 1 ? "recipe" : "recipes"}
-          {filtering ? ` of ${recipes.length}` : ""}
-        </span>
+      {/* Header row --------------------------------------------------------- */}
+      <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 border-t border-rule pt-4">
+        <div className="flex items-center gap-3">
+          <span className="tnum text-xs text-ink-mute">
+            {visible.length} {visible.length === 1 ? "recipe" : "recipes"}
+            {filtering ? ` of ${recipes.length}` : ""}
+          </span>
+          {filtering ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs text-ink-mute hover:text-accent"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
 
         <div className="flex items-center gap-3 text-sm">
+          {/* View toggle */}
+          <div
+            role="group"
+            aria-label="Layout"
+            className="flex overflow-hidden rounded-[2px] border border-rule"
+          >
+            {(["grid", "list"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={view === mode}
+                aria-label={mode === "grid" ? "Grid view" : "List view"}
+                onClick={() => writeView(mode)}
+                className={`px-2 py-1 transition-colors ${mode === "list" ? "border-l border-rule" : ""} ${
+                  view === mode
+                    ? "bg-accent text-accent-ink"
+                    : "bg-card text-ink-mute hover:text-ink"
+                }`}
+              >
+                {mode === "grid" ? (
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <rect x="1" y="1" width="5" height="5" fill="currentColor" />
+                    <rect x="8" y="1" width="5" height="5" fill="currentColor" />
+                    <rect x="1" y="8" width="5" height="5" fill="currentColor" />
+                    <rect x="8" y="8" width="5" height="5" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <rect x="1" y="2" width="12" height="2" fill="currentColor" />
+                    <rect x="1" y="6" width="12" height="2" fill="currentColor" />
+                    <rect x="1" y="10" width="12" height="2" fill="currentColor" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+
           <Link href="/pick" className="text-accent hover:underline">
-            What should we make?
+            Pick one
           </Link>
+
           {selecting ? (
             <button
               type="button"
@@ -174,40 +316,46 @@ export function RecipeBrowser({
       </div>
 
       {selecting ? (
-        <p className="mb-4 border border-rule bg-card px-3 py-2 text-sm text-ink-mute rounded-[2px]">
+        <p className="mb-4 rounded-[2px] border border-rule bg-card px-3 py-2 text-sm text-ink-mute">
           Tap the recipes you&apos;re shopping for, then copy the combined list.
         </p>
       ) : null}
 
-      {/* Grid -------------------------------------------------------------- */}
+      {/* Results ------------------------------------------------------------ */}
       {visible.length === 0 ? (
         <p className="py-16 text-center text-ink-mute">
           Nothing matches that. Try a different ingredient or clear the filters.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={
+            view === "grid"
+              ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              : "flex flex-col gap-2"
+          }
+        >
           {visible.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
+              view={view}
               selectable={selecting}
               selected={selected.has(recipe.id)}
-              onSelect={toggleSelected}
+              onSelect={(id) => toggle(setSelected, id)}
+              onDelete={selecting ? undefined : handleDelete}
+              deleting={pending && deletingId === recipe.id}
             />
           ))}
         </div>
       )}
 
-      {/* Selection action bar ---------------------------------------------- */}
       {selecting && selected.size > 0 ? (
         <div
-          className="fixed inset-x-0 z-30 border-t border-rule bg-card px-4 py-3"
-          style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-card px-4 py-3"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
         >
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-            <span className="tnum text-sm text-ink-mute">
-              {selected.size} selected
-            </span>
+            <span className="tnum text-sm text-ink-mute">{selected.size} selected</span>
             <div className="flex gap-2">
               <button
                 type="button"

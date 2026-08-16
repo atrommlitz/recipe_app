@@ -119,7 +119,12 @@ export function RecipeForm({
     if (!recipeId) return
     startTransition(async () => {
       const result = await deleteRecipe(recipeId)
-      if (result && "error" in result) setError(result.error)
+      if ("error" in result) {
+        setError(result.error)
+        return
+      }
+      router.push("/")
+      router.refresh()
     })
   }
 

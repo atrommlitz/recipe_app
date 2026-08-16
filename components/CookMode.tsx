@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { formatQuantity, scaleQuantity } from "@/lib/format"
+import { formatQuantity, scaleLabel, scaleQuantity } from "@/lib/format"
 import type { Ingredient, Step } from "@/lib/database.types"
 
 /**
@@ -97,7 +97,7 @@ export function CookMode({
         className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center"
         style={{ background: GROUND, color: PAPER }}
       >
-        <p className="text-xl">This recipe has no method steps yet.</p>
+        <p className="text-xl">This recipe has no instructions yet.</p>
         <Link href={`/recipes/${recipeId}`} className="underline" style={{ color: ACCENT }}>
           Back to the recipe
         </Link>
@@ -118,7 +118,7 @@ export function CookMode({
       <header className="flex items-center justify-between gap-4 px-5 py-4">
         <span className="tnum text-sm" style={{ color: MUTED }}>
           {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-          {multiplier > 1 ? `  ·  ${multiplier}x` : ""}
+          {multiplier !== 1 ? `  ·  ${scaleLabel(multiplier)}` : ""}
         </span>
 
         <div className="flex items-center gap-4">
@@ -209,7 +209,7 @@ export function CookMode({
           >
             <span className="tnum text-sm" style={{ color: MUTED }}>
               {title}
-              {multiplier > 1 ? `  ·  ${multiplier}x` : ""}
+              {multiplier !== 1 ? `  ·  ${scaleLabel(multiplier)}` : ""}
             </span>
             <button
               type="button"

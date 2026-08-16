@@ -18,7 +18,12 @@ const OPTIONS: Option[] = [
   {
     href: "/import/photo",
     title: "Snap a photo",
-    description: "A cookbook page or recipe card, read straight off the image.",
+    description: "One recipe, from one or more photos of the same dish.",
+  },
+  {
+    href: "/import/photos",
+    title: "Bulk photo import",
+    description: "A stack of recipe cards — one photo becomes one recipe.",
   },
   {
     href: "/recipes/new",

@@ -6,10 +6,11 @@ import { useState } from "react"
 import { Toast, useToast } from "@/components/Toast"
 import { buttonPrimary, buttonQuiet } from "@/components/ui"
 import { buildGroceryList, copyText } from "@/lib/grocery"
-import { formatQuantity, scaleQuantity } from "@/lib/format"
+import { formatQuantity, scaleLabel, scaleQuantity } from "@/lib/format"
 import type { Ingredient } from "@/lib/database.types"
 
-const MULTIPLIERS = [1, 2, 3, 4] as const
+/** Half steps from the recipe as written up to triple. */
+export const MULTIPLIERS = [1, 1.5, 2, 2.5, 3] as const
 
 /**
  * Owns the multiplier, so everything that depends on it lives here: the
@@ -37,7 +38,7 @@ export function RecipeScaler({
     const ok = await copyText(list)
     setToast(
       ok
-        ? `Copied${multiplier > 1 ? ` ${multiplier}x` : ""} to clipboard`
+        ? `Copied${multiplier !== 1 ? ` ${scaleLabel(multiplier)}` : ""} to clipboard`
         : "Couldn't copy — check clipboard permissions",
     )
   }
@@ -62,14 +63,14 @@ export function RecipeScaler({
                   aria-pressed={active}
                   onClick={() => setMultiplier(m)}
                   className={[
-                    "tnum cursor-pointer px-3 py-1.5 text-xs transition-colors",
+                    "tnum cursor-pointer px-2.5 py-1.5 text-xs transition-colors",
                     m !== 1 ? "border-l border-rule" : "",
                     active
                       ? "bg-accent text-accent-ink"
                       : "bg-card text-ink-mute hover:text-ink",
                   ].join(" ")}
                 >
-                  {m}x
+                  {scaleLabel(m)}
                 </button>
               )
             })}
@@ -78,9 +79,10 @@ export function RecipeScaler({
 
         {servings ? (
           <p className="tnum mb-3 text-xs text-ink-mute">
-            Makes {servings * multiplier}{" "}
+            {/* Half steps can land on a fraction: 3 servings at 1.5x is 4½. */}
+            Makes {formatQuantity(servings * multiplier)}{" "}
             {servings * multiplier === 1 ? "serving" : "servings"}
-            {multiplier > 1 ? ` (${servings} × ${multiplier})` : ""}
+            {multiplier !== 1 ? ` (${servings} × ${scaleLabel(multiplier).slice(0, -1)})` : ""}
           </p>
         ) : null}
 

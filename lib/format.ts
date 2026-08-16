@@ -18,8 +18,17 @@ const VULGAR: Record<string, string> = {
   "7/8": "⅞",
 }
 
-// Denominators a cook actually measures in, roughly in order of preference.
-const DENOMINATORS = [2, 3, 4, 8, 5, 6]
+/**
+ * Denominators a cook actually measures in, in order of preference.
+ *
+ * Halves, quarters and eighths first because those are the markings on real
+ * measuring spoons; thirds because cup sets have them. Sixteenths are last but
+ * present so half-scaling lands exactly — 0.125 x 1.5 is 3/16, and showing
+ * "3/16 tsp" is more use at the counter than the 0.19 it would otherwise fall
+ * back to. Fifths are deliberately absent: they'd win on near-misses like this
+ * one and nobody owns a 1/5 teaspoon.
+ */
+const DENOMINATORS = [2, 4, 3, 8, 16, 6]
 
 /**
  * Renders a quantity the way it would be written on a recipe card:
@@ -111,6 +120,11 @@ export function parseQuantity(input: string | null | undefined): number | null {
   if (!Number.isNaN(plain)) return plain + glyphValue
 
   return glyphValue || null
+}
+
+/** "1x", "1.5x" — no trailing ".0", which would imply precision. */
+export function scaleLabel(multiplier: number): string {
+  return `${multiplier % 1 === 0 ? multiplier : multiplier.toFixed(1)}x`
 }
 
 /** Scales a quantity for display only. Null passes straight through. */

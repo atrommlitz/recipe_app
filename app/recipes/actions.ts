@@ -1,6 +1,5 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
@@ -131,12 +130,19 @@ export async function deleteCookLogEntry(
   return { ok: true }
 }
 
-export async function deleteRecipe(id: string): Promise<{ error: string } | void> {
+/**
+ * Deletes a recipe. Children cascade via their foreign keys.
+ *
+ * Navigation is left to the caller: the edit page wants to go home afterwards,
+ * but deleting from a card on the grid should stay put.
+ */
+export async function deleteRecipe(
+  id: string,
+): Promise<{ error: string } | { ok: true }> {
   const supabase = await createClient()
-  // Ingredients and steps cascade via the foreign key.
   const { error } = await supabase.from("recipes").delete().eq("id", id)
   if (error) return { error: error.message }
 
   revalidatePath("/")
-  redirect("/")
+  return { ok: true }
 }
