@@ -21,13 +21,9 @@ export function SiteHeader({ email }: { email: string }) {
           Index
         </Link>
 
+        {/* Adding lives entirely on the + button on the home grid — no
+            duplicate entry points up here. */}
         <nav className="ml-auto flex items-baseline gap-4 text-sm">
-          <Link href="/recipes/new" className="hover:text-accent">
-            Add
-          </Link>
-          <Link href="/import/photo" className="hover:text-accent">
-            Import
-          </Link>
           <form action={signOut}>
             <button
               type="submit"
