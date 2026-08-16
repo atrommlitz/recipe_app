@@ -35,13 +35,9 @@ export const metadata: Metadata = {
     title: "Index",
     statusBarStyle: "default",
   },
-  icons: {
-    icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
-  },
+  // Favicon and apple-touch-icon come from app/icon.png and app/apple-icon.png
+  // via Next's file conventions. The manifest points at /icons/* separately,
+  // which is what the installed home-screen app uses.
 }
 
 export const viewport: Viewport = {

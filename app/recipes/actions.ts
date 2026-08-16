@@ -81,9 +81,9 @@ export async function saveRecipe(
     if (error) return { error: error.message }
   }
 
-  // Cooking methods: replace wholesale, same as ingredients and steps.
-  // Undefined means the caller doesn't manage methods (the importers), so
-  // leave whatever is there alone rather than clearing it.
+  // Tags: replace wholesale, same as ingredients and steps. Undefined means
+  // the caller doesn't manage them, so leave whatever is there alone rather
+  // than clearing it.
   if (recipe.cooking_method_ids !== undefined) {
     await supabase.from("recipe_cooking_methods").delete().eq("recipe_id", recipeId)
 
@@ -93,6 +93,17 @@ export async function saveRecipe(
           recipe_id: recipeId,
           cooking_method_id,
         })),
+      )
+      if (error) return { error: error.message }
+    }
+  }
+
+  if (recipe.course_ids !== undefined) {
+    await supabase.from("recipe_courses").delete().eq("recipe_id", recipeId)
+
+    if (recipe.course_ids.length > 0) {
+      const { error } = await supabase.from("recipe_courses").insert(
+        recipe.course_ids.map((course_id) => ({ recipe_id: recipeId, course_id })),
       )
       if (error) return { error: error.message }
     }

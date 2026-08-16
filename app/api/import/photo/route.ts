@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
 import { MissingApiKeyError, parseRecipeFromImages } from "@/lib/anthropic"
-import { methodIdsByName } from "@/lib/queries"
+import { courseIdsByName, methodIdsByName } from "@/lib/queries"
 import type { EditableRecipe } from "@/lib/schemas"
 
 export const maxDuration = 300
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         image_url: null,
         source_url: null,
         cooking_method_ids: await methodIdsByName(draft.cooking_methods),
+        course_ids: await courseIdsByName(draft.courses),
       } satisfies EditableRecipe,
     })
   } catch (error) {

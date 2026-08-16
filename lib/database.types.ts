@@ -41,6 +41,54 @@ export type Database = {
           },
         ]
       }
+      courses: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      recipe_courses: {
+        Row: {
+          course_id: string
+          recipe_id: string
+        }
+        Insert: {
+          course_id: string
+          recipe_id: string
+        }
+        Update: {
+          course_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_courses_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cooking_methods: {
         Row: {
           id: string
@@ -216,6 +264,7 @@ export type Recipe = Tables<"recipes">
 export type Ingredient = Tables<"ingredients">
 export type Step = Tables<"steps">
 export type CookingMethod = Tables<"cooking_methods">
+export type Course = Tables<"courses">
 export type CookLogEntry = Tables<"cook_log">
 
 export type RecipeWithRelations = Recipe & {

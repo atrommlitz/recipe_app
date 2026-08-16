@@ -1,5 +1,6 @@
 import { gunzipSync, unzipSync } from "fflate"
 
+import { inferCourses } from "@/lib/courses"
 import { inferMethods, splitIntoSteps, stripStepMarker } from "@/lib/steps"
 import type { EditableRecipe } from "@/lib/schemas"
 
@@ -23,6 +24,7 @@ export type PaprikaRecipe = {
   image_url?: string
   photo?: string
   photo_data?: string
+  categories?: string[]
 }
 
 export function unpackArchive(buffer: ArrayBuffer): PaprikaRecipe[] {
@@ -120,6 +122,7 @@ export function mapPaprikaRecipe(recipe: PaprikaRecipe): {
   ingredientLines: string[]
   photoBase64: string | null
   methodNames: string[]
+  courseNames: string[]
 } {
   const notes = [
     recipe.notes?.trim(),
@@ -149,5 +152,8 @@ export function mapPaprikaRecipe(recipe: PaprikaRecipe): {
     // Keyword guess rather than a model call — tagging 87 recipes shouldn't
     // cost 87 extra requests, and these are easy to correct by hand.
     methodNames: inferMethods([title, ...steps].join("\n")),
+    // Paprika's own categories are free-form folders, but they're a useful
+    // hint alongside the title when guessing what kind of dish this is.
+    courseNames: inferCourses([title, ...(recipe.categories ?? [])].join("\n")),
   }
 }

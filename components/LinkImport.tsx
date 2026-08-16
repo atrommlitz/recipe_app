@@ -5,7 +5,7 @@ import { useState } from "react"
 
 import { RecipeForm } from "@/components/RecipeForm"
 import { buttonPrimary, inputClass, labelClass } from "@/components/ui"
-import type { CookingMethod } from "@/lib/database.types"
+import type { CookingMethod, Course } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
 
 const VIA_LABEL: Record<string, string> = {
@@ -14,7 +14,13 @@ const VIA_LABEL: Record<string, string> = {
   "pasted-text": "Pulled out of your pasted text by Claude.",
 }
 
-export function LinkImport({ methods = [] }: { methods?: CookingMethod[] }) {
+export function LinkImport({
+  methods = [],
+  courses = [],
+}: {
+  methods?: CookingMethod[]
+  courses?: Course[]
+}) {
   const [url, setUrl] = useState("")
   const [text, setText] = useState("")
   const [showTextarea, setShowTextarea] = useState(false)
@@ -64,7 +70,12 @@ export function LinkImport({ methods = [] }: { methods?: CookingMethod[] }) {
             </p>
           </div>
         </div>
-        <RecipeForm initial={draft} methods={methods} submitLabel="Save recipe" />
+        <RecipeForm
+          initial={draft}
+          methods={methods}
+          courses={courses}
+          submitLabel="Save recipe"
+        />
       </div>
     )
   }

@@ -6,12 +6,18 @@ import { useRef, useState } from "react"
 import { RecipeForm } from "@/components/RecipeForm"
 import { buttonPrimary, buttonQuiet, labelClass } from "@/components/ui"
 import { IMAGE_ACCEPT, prepareImage, type PreparedImage } from "@/lib/image"
-import type { CookingMethod } from "@/lib/database.types"
+import type { CookingMethod, Course } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
 
 const MAX_IMAGES = 5
 
-export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
+export function PhotoImport({
+  methods,
+  courses,
+}: {
+  methods: CookingMethod[]
+  courses: Course[]
+}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<PreparedImage[]>([])
   const [busy, setBusy] = useState(false)
@@ -83,7 +89,12 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
             </p>
           </div>
         </div>
-        <RecipeForm initial={draft} methods={methods} submitLabel="Save recipe" />
+        <RecipeForm
+          initial={draft}
+          methods={methods}
+          courses={courses}
+          submitLabel="Save recipe"
+        />
       </div>
     )
   }

@@ -7,7 +7,7 @@ import { buttonPrimary, buttonQuiet } from "@/components/ui"
 import { importRecipes, type ImportFailure } from "@/app/import/actions"
 import { IMAGE_ACCEPT, prepareImage, type PreparedImage } from "@/lib/image"
 import { uploadImage } from "@/lib/upload"
-import type { CookingMethod } from "@/lib/database.types"
+import type { CookingMethod, Course } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
 
 const MAX_PHOTOS = 40
@@ -24,7 +24,13 @@ type Phase = "idle" | "preparing" | "reading" | "saving" | "done" | "error"
  * visible count rather than firing everything at once, and a photo that fails
  * to parse is reported by name instead of taking the batch down.
  */
-export function BulkPhotoImport({ methods }: { methods: CookingMethod[] }) {
+export function BulkPhotoImport({
+  methods,
+  courses,
+}: {
+  methods: CookingMethod[]
+  courses: Course[]
+}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<{ image: PreparedImage; name: string }[]>([])
   const [phase, setPhase] = useState<Phase>("idle")
@@ -34,6 +40,7 @@ export function BulkPhotoImport({ methods }: { methods: CookingMethod[] }) {
   const [failed, setFailed] = useState<ImportFailure[]>([])
 
   const methodIdByName = new Map(methods.map((m) => [m.name.toLowerCase(), m.id]))
+  const courseIdByName = new Map(courses.map((c) => [c.name.toLowerCase(), c.id]))
 
   async function addFiles(files: FileList) {
     setError(null)
@@ -108,6 +115,11 @@ export function BulkPhotoImport({ methods }: { methods: CookingMethod[] }) {
               recipe.cooking_method_ids ??
               (recipe.cooking_methods ?? [])
                 .map((name) => methodIdByName.get(name.toLowerCase()))
+                .filter((id): id is string => Boolean(id)),
+            course_ids:
+              recipe.course_ids ??
+              (recipe.courses ?? [])
+                .map((name) => courseIdByName.get(name.toLowerCase()))
                 .filter((id): id is string => Boolean(id)),
           })
         }

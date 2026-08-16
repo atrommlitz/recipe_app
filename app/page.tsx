@@ -2,12 +2,13 @@ import Link from "next/link"
 
 import { RecipeBrowser } from "@/components/RecipeBrowser"
 import { buttonPrimary, buttonQuiet } from "@/components/ui"
-import { getCookingMethods, getGridRecipes } from "@/lib/queries"
+import { getCookingMethods, getCourses, getGridRecipes } from "@/lib/queries"
 
 export default async function HomePage() {
-  const [{ recipes, error }, methods] = await Promise.all([
+  const [{ recipes, error }, methods, courses] = await Promise.all([
     getGridRecipes(),
     getCookingMethods(),
+    getCourses(),
   ])
 
   if (error) {
@@ -46,5 +47,5 @@ export default async function HomePage() {
     )
   }
 
-  return <RecipeBrowser recipes={recipes} methods={methods} />
+  return <RecipeBrowser recipes={recipes} methods={methods} courses={courses} />
 }

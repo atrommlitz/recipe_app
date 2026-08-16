@@ -3,14 +3,15 @@ import type { Metadata } from "next"
 
 import { RecipeForm } from "@/components/RecipeForm"
 import { createClient } from "@/lib/supabase/server"
-import { getCookingMethods } from "@/lib/queries"
+import { getCookingMethods, getCourses } from "@/lib/queries"
 import type { EditableRecipe } from "@/lib/schemas"
-import type { CookingMethod, Ingredient, Recipe, Step } from "@/lib/database.types"
+import type { CookingMethod, Course, Ingredient, Recipe, Step } from "@/lib/database.types"
 
 type FullRecipe = Recipe & {
   ingredients: Ingredient[]
   steps: Step[]
   cooking_methods: CookingMethod[]
+  courses: Course[]
 }
 
 export const metadata: Metadata = { title: "Edit recipe" }
@@ -21,15 +22,16 @@ export default async function EditRecipePage({
   const { id } = await params
 
   const supabase = await createClient()
-  const [{ data }, methods] = await Promise.all([
+  const [{ data }, methods, courses] = await Promise.all([
     supabase
       .from("recipes")
-      .select("*, ingredients(*), steps(*), cooking_methods(id, name, sort_order)")
+      .select("*, ingredients(*), steps(*), cooking_methods(id, name, sort_order), courses(id, name, sort_order)")
       .eq("id", id)
       .order("sort_order", { referencedTable: "ingredients", ascending: true })
       .order("step_number", { referencedTable: "steps", ascending: true })
       .maybeSingle(),
     getCookingMethods(),
+    getCourses(),
   ])
 
   const recipe = data as FullRecipe | null
@@ -50,6 +52,7 @@ export default async function EditRecipePage({
     })),
     steps: recipe.steps.map((s) => s.instruction),
     cooking_method_ids: recipe.cooking_methods.map((m) => m.id),
+    course_ids: recipe.courses.map((c) => c.id),
   }
 
   return (
@@ -57,6 +60,7 @@ export default async function EditRecipePage({
       recipeId={recipe.id}
       initial={initial}
       methods={methods}
+      courses={courses}
       submitLabel="Save changes"
     />
   )

@@ -3,7 +3,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { MissingApiKeyError, parseIngredientGroups, parseRecipeFromText } from "@/lib/anthropic"
 import { extractJsonLdRecipe, extractOpenGraph, htmlToText } from "@/lib/extract"
-import { methodIdsByName } from "@/lib/queries"
+import { courseIdsByName, methodIdsByName } from "@/lib/queries"
+import { inferCourses } from "@/lib/courses"
 import { inferMethods } from "@/lib/steps"
 import type { EditableRecipe } from "@/lib/schemas"
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
           image_url: null,
           source_url: rawUrl ?? null,
           cooking_method_ids: await methodIdsByName(draft.cooking_methods),
+          course_ids: await courseIdsByName(draft.courses),
         } satisfies EditableRecipe,
         via: "pasted-text",
       })
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       // This path never runs the full model pass, so methods come from
       // keyword inference over the instructions we just extracted.
       const methodNames = inferMethods([jsonLd.title, ...jsonLd.steps].join("\n"))
+      const courseNames = inferCourses([jsonLd.title, jsonLd.notes ?? ""].join("\n"))
 
       return NextResponse.json({
         recipe: {
@@ -103,9 +106,11 @@ export async function POST(request: Request) {
           steps: jsonLd.steps,
           notes: jsonLd.notes,
           cooking_methods: methodNames,
+          courses: courseNames,
           image_url: jsonLd.imageUrl,
           source_url: rawUrl,
           cooking_method_ids: await methodIdsByName(methodNames),
+          course_ids: await courseIdsByName(courseNames),
         } satisfies EditableRecipe,
         via: "json-ld",
       })
@@ -153,6 +158,7 @@ export async function POST(request: Request) {
         image_url: og.image ?? null,
         source_url: rawUrl,
         cooking_method_ids: await methodIdsByName(draft.cooking_methods),
+        course_ids: await courseIdsByName(draft.courses),
       } satisfies EditableRecipe,
       via: "model",
     })

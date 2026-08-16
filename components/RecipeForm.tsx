@@ -5,7 +5,7 @@ import { useState, useTransition } from "react"
 
 import { ImageUpload } from "@/components/ImageUpload"
 import { MethodToggle } from "@/components/MethodChip"
-import type { CookingMethod } from "@/lib/database.types"
+import type { CookingMethod, Course } from "@/lib/database.types"
 import {
   buttonDanger,
   buttonPrimary,
@@ -56,11 +56,13 @@ export function RecipeForm({
   recipeId,
   initial,
   methods = [],
+  courses = [],
   submitLabel = "Save recipe",
 }: {
   recipeId?: string
   initial: EditableRecipe
   methods?: CookingMethod[]
+  courses?: Course[]
   submitLabel?: string
 }) {
   const router = useRouter()
@@ -79,6 +81,9 @@ export function RecipeForm({
   const [steps, setSteps] = useState<StepRow[]>(() => toStepRows(initial))
   const [methodIds, setMethodIds] = useState<Set<string>>(
     () => new Set(initial.cooking_method_ids ?? []),
+  )
+  const [courseIds, setCourseIds] = useState<Set<string>>(
+    () => new Set(initial.course_ids ?? []),
   )
 
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +107,7 @@ export function RecipeForm({
       })),
       steps: steps.map((s) => s.text),
       cooking_method_ids: [...methodIds],
+      course_ids: [...courseIds],
     }
 
     startTransition(async () => {
@@ -188,6 +194,29 @@ export function RecipeForm({
             />
           </div>
         </div>
+
+        {courses.length > 0 ? (
+          <section>
+            <span className={labelClass}>What kind of dish</span>
+            <div className="flex flex-wrap gap-1.5">
+              {courses.map((course) => (
+                <MethodToggle
+                  key={course.id}
+                  name={course.name}
+                  selected={courseIds.has(course.id)}
+                  onToggle={() =>
+                    setCourseIds((current) => {
+                      const next = new Set(current)
+                      if (next.has(course.id)) next.delete(course.id)
+                      else next.add(course.id)
+                      return next
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {methods.length > 0 ? (
           <section>

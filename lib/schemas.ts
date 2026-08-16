@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { COURSE_NAMES, type CourseName } from "@/lib/courses"
 import { METHOD_NAMES, type MethodName } from "@/lib/steps"
 
 /**
@@ -38,6 +39,11 @@ export const recipeDraftSchema = z.object({
     .describe(
       "Which of the fixed cooking methods this recipe uses, judged from the instructions and equipment. Usually one or two. Empty if genuinely unclear.",
     ),
+  courses: z
+    .array(z.enum(COURSE_NAMES))
+    .describe(
+      "What kind of dish this is. Almost always exactly one. Use Main for a dinner or lunch centrepiece.",
+    ),
   notes: z
     .string()
     .nullable()
@@ -55,15 +61,17 @@ export type RecipeDraft = z.infer<typeof recipeDraftSchema>
  * resolved `cooking_method_ids` that matter, and hand-written recipes never
  * have the name list at all.
  */
-export type EditableRecipe = Omit<RecipeDraft, "cooking_methods"> & {
+export type EditableRecipe = Omit<RecipeDraft, "cooking_methods" | "courses"> & {
   cooking_methods?: MethodName[]
+  courses?: CourseName[]
   image_url: string | null
   source_url: string | null
   /**
-   * Undefined means "this caller doesn't manage methods" and leaves existing
-   * tags alone on save; an empty array clears them.
+   * Undefined means "this caller doesn't manage tags" and leaves existing ones
+   * alone on save; an empty array clears them.
    */
   cooking_method_ids?: string[]
+  course_ids?: string[]
 }
 
 export const emptyRecipe: EditableRecipe = {
@@ -77,4 +85,5 @@ export const emptyRecipe: EditableRecipe = {
   image_url: null,
   source_url: null,
   cooking_method_ids: [],
+  course_ids: [],
 }

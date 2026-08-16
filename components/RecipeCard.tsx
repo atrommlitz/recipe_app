@@ -5,10 +5,13 @@ import Link from "next/link"
 import { useState } from "react"
 
 import { MethodBadge } from "@/components/MethodChip"
-import type { CookingMethod, Recipe } from "@/lib/database.types"
+import type { CookingMethod, Course, Recipe } from "@/lib/database.types"
 import { formatTotalTime } from "@/lib/format"
 
-type CardRecipe = Recipe & { cooking_methods?: CookingMethod[] }
+type CardRecipe = Recipe & {
+  cooking_methods?: CookingMethod[]
+  courses?: Course[]
+}
 
 export type ViewMode = "grid" | "list"
 
@@ -19,37 +22,50 @@ function metaLine(recipe: CardRecipe) {
     .join("  ·  ")
 }
 
-function sortedMethods(recipe: CardRecipe) {
-  return [...(recipe.cooking_methods ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+/** Course first — it's the more useful glance ("Dessert" beats "Oven"). */
+function sortedTags(recipe: CardRecipe) {
+  return [
+    ...[...(recipe.courses ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    ...[...(recipe.cooking_methods ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+  ]
 }
 
 /**
- * Delete affordance. Revealed on hover on pointer devices; on touch, where
- * there is no hover, it stays visible — otherwise it would be unreachable.
- * Confirms in place rather than in a dialog so a mis-tap costs one more tap,
- * not a modal.
+ * Per-card actions: export and delete.
+ *
+ * Revealed on hover on pointer devices; on touch, where there is no hover,
+ * they stay visible — otherwise they'd be unreachable. Both confirm or act in
+ * place rather than in a dialog, so a mis-tap costs one more tap, not a modal.
  */
-function DeleteControl({
+function CardActions({
   title,
   onDelete,
+  onExport,
   busy,
 }: {
   title: string
   onDelete: () => void
+  onExport: () => void
   busy: boolean
 }) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
+  // Card actions live inside the card's link, so every one of them has to stop
+  // the click from navigating.
   const stop = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
   }
 
+  const button =
+    "flex h-8 w-8 items-center justify-center rounded-[2px] border border-rule bg-card text-ink-mute"
+
   if (confirming) {
     return (
       <div
         onClick={stop}
-        className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-[2px] border border-alert bg-card px-1.5 py-1"
+        className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-[2px] border border-alert bg-card px-1.5 py-1"
       >
         <span className="text-xs text-ink">Delete?</span>
         <button
@@ -78,26 +94,66 @@ function DeleteControl({
   }
 
   return (
-    <button
-      type="button"
-      aria-label={`Delete ${title}`}
-      title={`Delete ${title}`}
-      onClick={(e) => {
-        stop(e)
-        setConfirming(true)
-      }}
-      className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-[2px] border border-rule bg-card text-ink-mute opacity-0 transition-opacity hover:border-alert hover:text-alert focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+    <div
+      onClick={stop}
+      className="absolute top-2 right-2 z-20 flex items-start gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
     >
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <path
-          d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.6 8.5h5.8l.6-8.5M6 6v4M8 6v4"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+      <div className="relative">
+        <button
+          type="button"
+          aria-label={`More actions for ${title}`}
+          aria-expanded={menuOpen}
+          onClick={(e) => {
+            stop(e)
+            setMenuOpen((v) => !v)
+          }}
+          className={`${button} hover:border-ink-mute hover:text-ink`}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <circle cx="7" cy="2.5" r="1.3" fill="currentColor" />
+            <circle cx="7" cy="7" r="1.3" fill="currentColor" />
+            <circle cx="7" cy="11.5" r="1.3" fill="currentColor" />
+          </svg>
+        </button>
+
+        {menuOpen ? (
+          <div className="absolute top-full right-0 z-30 mt-1 min-w-[13rem] rounded-[2px] border border-rule bg-card py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
+            <button
+              type="button"
+              onClick={(e) => {
+                stop(e)
+                setMenuOpen(false)
+                onExport()
+              }}
+              className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-ground"
+            >
+              Export as .paprikarecipe
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        aria-label={`Delete ${title}`}
+        title={`Delete ${title}`}
+        onClick={(e) => {
+          stop(e)
+          setConfirming(true)
+        }}
+        className={`${button} hover:border-alert hover:text-alert`}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path
+            d="M2 3.5h10M5.5 3.5V2h3v1.5M3.5 3.5l.6 8.5h5.8l.6-8.5M6 6v4M8 6v4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
   )
 }
 
@@ -108,6 +164,7 @@ export function RecipeCard({
   selected = false,
   onSelect,
   onDelete,
+  onExport,
   deleting = false,
 }: {
   recipe: CardRecipe
@@ -116,10 +173,11 @@ export function RecipeCard({
   selected?: boolean
   onSelect?: (id: string) => void
   onDelete?: (id: string) => void
+  onExport?: (id: string) => void
   deleting?: boolean
 }) {
   const meta = metaLine(recipe)
-  const methods = sortedMethods(recipe)
+  const tags = sortedTags(recipe)
 
   const shell =
     "group relative block overflow-hidden rounded-[2px] border bg-card text-left transition-colors"
@@ -146,9 +204,9 @@ export function RecipeCard({
           ✓
         </span>
         {view === "list" ? (
-          <ListBody recipe={recipe} meta={meta} methods={methods} />
+          <ListBody recipe={recipe} meta={meta} tags={tags} />
         ) : (
-          <GridBody recipe={recipe} meta={meta} methods={methods} />
+          <GridBody recipe={recipe} meta={meta} tags={tags} />
         )}
       </button>
     )
@@ -157,11 +215,12 @@ export function RecipeCard({
   // ---- Normal mode --------------------------------------------------------
   return (
     <div className={`${shell} border-rule hover:border-ink-mute`}>
-      {onDelete ? (
-        <DeleteControl
+      {onDelete && onExport ? (
+        <CardActions
           title={recipe.title}
           busy={deleting}
           onDelete={() => onDelete(recipe.id)}
+          onExport={() => onExport(recipe.id)}
         />
       ) : null}
 
@@ -170,9 +229,9 @@ export function RecipeCard({
         className={`block ${view === "list" ? "flex items-stretch gap-3" : ""} [&_h2]:hover:text-accent`}
       >
         {view === "list" ? (
-          <ListBody recipe={recipe} meta={meta} methods={methods} />
+          <ListBody recipe={recipe} meta={meta} tags={tags} />
         ) : (
-          <GridBody recipe={recipe} meta={meta} methods={methods} />
+          <GridBody recipe={recipe} meta={meta} tags={tags} />
         )}
       </Link>
     </div>
@@ -182,11 +241,11 @@ export function RecipeCard({
 function GridBody({
   recipe,
   meta,
-  methods,
+  tags,
 }: {
   recipe: CardRecipe
   meta: string
-  methods: CookingMethod[]
+  tags: { id: string; name: string }[]
 }) {
   return (
     <>
@@ -211,9 +270,9 @@ function GridBody({
           {recipe.title}
         </h2>
         {meta ? <p className="tnum mt-1 text-xs text-ink-mute">{meta}</p> : null}
-        {methods.length > 0 ? (
+        {tags.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1">
-            {methods.map((m) => (
+            {tags.map((m) => (
               <MethodBadge key={m.id} name={m.name} />
             ))}
           </div>
@@ -226,11 +285,11 @@ function GridBody({
 function ListBody({
   recipe,
   meta,
-  methods,
+  tags,
 }: {
   recipe: CardRecipe
   meta: string
-  methods: CookingMethod[]
+  tags: { id: string; name: string }[]
 }) {
   return (
     <>
@@ -251,9 +310,9 @@ function ListBody({
           {recipe.title}
         </h2>
         {meta ? <p className="tnum mt-1 text-xs text-ink-mute">{meta}</p> : null}
-        {methods.length > 0 ? (
+        {tags.length > 0 ? (
           <div className="mt-1.5 flex flex-wrap gap-1">
-            {methods.map((m) => (
+            {tags.map((m) => (
               <MethodBadge key={m.id} name={m.name} />
             ))}
           </div>

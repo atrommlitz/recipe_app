@@ -74,6 +74,12 @@ export async function importRecipes(recipes: EditableRecipe[]): Promise<ImportRe
         if (stepError) throw new Error(stepError.message)
       }
 
+      if (recipe.course_ids?.length) {
+        await supabase.from("recipe_courses").insert(
+          recipe.course_ids.map((course_id) => ({ recipe_id: data.id, course_id })),
+        )
+      }
+
       if (recipe.cooking_method_ids?.length) {
         // A failed tag shouldn't lose the recipe — it's a guess either way
         // and trivial to fix by hand.

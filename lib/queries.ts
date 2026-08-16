@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import type { CookingMethod, Recipe } from "@/lib/database.types"
+import type { CookingMethod, Course, Recipe } from "@/lib/database.types"
 
 /**
  * Everything the grid needs in one round trip: methods for the filter chips
@@ -20,6 +20,11 @@ export type GridIngredient = {
 
 export type GridRecipe = Recipe & {
   cooking_methods: CookingMethod[]
+  courses: Course[]
+  // Steps ride along so the Paprika export can be built without a round trip:
+  // the iOS share sheet must open from the click, and awaiting a fetch first
+  // can lose the user gesture.
+  steps: { instruction: string; step_number: number }[]
   // Full ingredient rows, not just names: search needs the names, the grocery
   // list needs the quantities and units.
   ingredients: GridIngredient[]
@@ -42,10 +47,11 @@ export async function getGridRecipes(): Promise<{
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "*, cooking_methods(id, name, sort_order), ingredients(quantity, unit, item, sort_order), cook_log(cooked_at)",
+      "*, cooking_methods(id, name, sort_order), courses(id, name, sort_order), ingredients(quantity, unit, item, sort_order), steps(instruction, step_number), cook_log(cooked_at)",
     )
     .order("created_at", { ascending: false })
     .order("sort_order", { referencedTable: "ingredients", ascending: true })
+    .order("step_number", { referencedTable: "steps", ascending: true })
 
   if (error) return { recipes: [], error: error.message, now }
   return { recipes: (data ?? []) as GridRecipe[], error: null, now }
@@ -60,22 +66,42 @@ export async function getCookingMethods(): Promise<CookingMethod[]> {
   return data ?? []
 }
 
+export async function getCourses(): Promise<Course[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("courses")
+    .select("*")
+    .order("sort_order", { ascending: true })
+  return data ?? []
+}
+
 /**
- * Resolves cooking method names (from the model, or from keyword inference)
- * to the seeded row ids. Unknown names are dropped rather than created — the
- * set is deliberately fixed.
+ * Resolves names (from the model, or from keyword inference) to seeded row
+ * ids. Unknown names are dropped rather than created — both sets are
+ * deliberately fixed.
  */
-export async function methodIdsByName(names: string[]): Promise<string[]> {
+async function idsByName(
+  table: "cooking_methods" | "courses",
+  names: string[],
+): Promise<string[]> {
   if (!names || names.length === 0) return []
 
   const supabase = await createClient()
-  const { data } = await supabase.from("cooking_methods").select("id, name")
+  const { data } = await supabase.from(table).select("id, name")
   if (!data) return []
 
-  const byName = new Map(data.map((m) => [m.name.toLowerCase(), m.id]))
+  const byName = new Map(data.map((row) => [row.name.toLowerCase(), row.id]))
   return names
     .map((name) => byName.get(name.trim().toLowerCase()))
     .filter((id): id is string => Boolean(id))
+}
+
+export function methodIdsByName(names: string[]) {
+  return idsByName("cooking_methods", names)
+}
+
+export function courseIdsByName(names: string[]) {
+  return idsByName("courses", names)
 }
 
 /** Most recent cook date for a recipe, or null if it's never been made. */

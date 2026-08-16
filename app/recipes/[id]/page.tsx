@@ -11,6 +11,7 @@ import { formatMinutes } from "@/lib/format"
 import type {
   CookLogEntry,
   CookingMethod,
+  Course,
   Ingredient,
   Recipe,
   Step,
@@ -20,6 +21,7 @@ type FullRecipe = Recipe & {
   ingredients: Ingredient[]
   steps: Step[]
   cooking_methods: CookingMethod[]
+  courses: Course[]
   cook_log: CookLogEntry[]
 }
 
@@ -28,7 +30,7 @@ async function getRecipe(id: string): Promise<FullRecipe | null> {
   const { data } = await supabase
     .from("recipes")
     .select(
-      "*, ingredients(*), steps(*), cooking_methods(id, name, sort_order), cook_log(*)",
+      "*, ingredients(*), steps(*), cooking_methods(id, name, sort_order), courses(id, name, sort_order), cook_log(*)",
     )
     .eq("id", id)
     .order("sort_order", { referencedTable: "ingredients", ascending: true })
@@ -59,9 +61,11 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
     recipe.cook_time_minutes ? `${formatMinutes(recipe.cook_time_minutes)} cook` : null,
   ].filter(Boolean)
 
-  const methods = [...recipe.cooking_methods].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  )
+  // Course first — it says more at a glance than the equipment does.
+  const tags = [
+    ...[...recipe.courses].sort((a, b) => a.sort_order - b.sort_order),
+    ...[...recipe.cooking_methods].sort((a, b) => a.sort_order - b.sort_order),
+  ]
 
   return (
     <article className="pb-28">
@@ -88,9 +92,9 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
             <p className="tnum mt-2 text-xs text-ink-mute">{meta.join("  ·  ")}</p>
           ) : null}
 
-          {methods.length > 0 ? (
+          {tags.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {methods.map((m) => (
+              {tags.map((m) => (
                 <MethodBadge key={m.id} name={m.name} />
               ))}
             </div>

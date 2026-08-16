@@ -49,6 +49,10 @@ Rules:
   "grill"/"barbecue" -> Grill; "air fryer" -> Air Fryer; nothing heated at all
   -> No-Cook. A recipe can use more than one (searing then braising in the oven
   is both Stovetop and Oven). Never combine No-Cook with a heat-based method.
+- Set courses to what kind of dish it is — almost always exactly one. Main is
+  the default for a dinner or lunch centrepiece; use Side, Appetizer, Soup,
+  Salad, Breakfast, Dessert, Drink, Snack or Sauce when the recipe clearly is
+  one of those.
 - If the text is not a recipe, return an empty ingredients array and an empty steps array.`
 
 /** Full extraction from unstructured page text or a pasted caption. */

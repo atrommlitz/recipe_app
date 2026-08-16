@@ -12,7 +12,8 @@ import { buttonPrimary, buttonQuiet, inputClass } from "@/components/ui"
 import { deleteRecipe } from "@/app/recipes/actions"
 import { buildGroceryList, copyText } from "@/lib/grocery"
 import { inferProteins, PROTEIN_GROUPS, type ProteinGroup } from "@/lib/protein"
-import type { CookingMethod } from "@/lib/database.types"
+import { exportFilename, shareOrDownload, toPaprikaFile } from "@/lib/paprika-export"
+import type { CookingMethod, Course } from "@/lib/database.types"
 import type { GridRecipe } from "@/lib/queries"
 
 const VIEW_STORAGE_KEY = "index:view"
@@ -47,6 +48,29 @@ function writeView(next: ViewMode) {
   for (const listener of viewListeners) listener()
 }
 
+/** Sort orders. Newest first matches how recipes arrive. */
+const SORTS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "az", label: "A – Z" },
+  { value: "za", label: "Z – A" },
+  { value: "cooked", label: "Recently cooked" },
+] as const
+
+type SortValue = (typeof SORTS)[number]["value"]
+
+function lastCookedMs(recipe: GridRecipe): number {
+  if (!recipe.cook_log?.length) return 0
+  return recipe.cook_log.reduce(
+    (max, e) => Math.max(max, new Date(e.cooked_at).getTime()),
+    0,
+  )
+}
+
+function createdMs(recipe: GridRecipe): number {
+  return recipe.created_at ? new Date(recipe.created_at).getTime() : 0
+}
+
 /** Prep-time buckets, in minutes. 0 means no limit. */
 const PREP_BUCKETS = [
   { label: "Any", max: 0 },
@@ -66,9 +90,11 @@ function matchesSearch(recipe: GridRecipe, terms: string[]): boolean {
 export function RecipeBrowser({
   recipes,
   methods,
+  courses,
 }: {
   recipes: GridRecipe[]
   methods: CookingMethod[]
+  courses: Course[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -76,6 +102,8 @@ export function RecipeBrowser({
   const [query, setQuery] = useState("")
   const [activeMethods, setActiveMethods] = useState<Set<string>>(new Set())
   const [activeProteins, setActiveProteins] = useState<Set<ProteinGroup>>(new Set())
+  const [activeCourses, setActiveCourses] = useState<Set<string>>(new Set())
+  const [sort, setSort] = useState<SortValue>("newest")
   const [maxPrep, setMaxPrep] = useState<number>(0)
   const view = useSyncExternalStore(subscribeToView, readView, readServerView)
   const [selecting, setSelecting] = useState(false)
@@ -108,6 +136,10 @@ export function RecipeBrowser({
           if (!recipe.cooking_methods.some((m) => activeMethods.has(m.id))) return false
         }
 
+        if (activeCourses.size > 0) {
+          if (!recipe.courses.some((c) => activeCourses.has(c.id))) return false
+        }
+
         if (activeProteins.size > 0) {
           const proteins = proteinsById.get(recipe.id) ?? []
           if (!proteins.some((p) => activeProteins.has(p))) return false
@@ -122,8 +154,25 @@ export function RecipeBrowser({
 
         return matchesSearch(recipe, terms)
       }),
-    [recipes, activeMethods, activeProteins, maxPrep, terms, proteinsById],
+    [recipes, activeMethods, activeCourses, activeProteins, maxPrep, terms, proteinsById],
   )
+
+  const sorted = useMemo(() => {
+    const list = [...visible]
+    switch (sort) {
+      case "oldest":
+        return list.sort((a, b) => createdMs(a) - createdMs(b))
+      case "az":
+        return list.sort((a, b) => a.title.localeCompare(b.title))
+      case "za":
+        return list.sort((a, b) => b.title.localeCompare(a.title))
+      case "cooked":
+        // Never-cooked recipes sort to the bottom rather than the top.
+        return list.sort((a, b) => lastCookedMs(b) - lastCookedMs(a))
+      default:
+        return list.sort((a, b) => createdMs(b) - createdMs(a))
+    }
+  }, [visible, sort])
 
   function toggle<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, value: T) {
     setter((current) => {
@@ -152,6 +201,21 @@ export function RecipeBrowser({
     }
   }
 
+  async function handleExport(id: string) {
+    const recipe = recipes.find((r) => r.id === id)
+    if (!recipe) return
+
+    try {
+      // Built synchronously from data already loaded, so the click's user
+      // gesture survives into navigator.share — iOS drops the share sheet
+      // otherwise.
+      const where = await shareOrDownload(toPaprikaFile(recipe))
+      if (where === "downloaded") setToast(`Saved ${exportFilename(recipe.title)}`)
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Couldn't export that recipe.")
+    }
+  }
+
   function handleDelete(id: string) {
     const recipe = recipes.find((r) => r.id === id)
     setDeletingId(id)
@@ -168,9 +232,14 @@ export function RecipeBrowser({
   }
 
   const filtering =
-    activeMethods.size > 0 || activeProteins.size > 0 || maxPrep > 0 || terms.length > 0
+    activeMethods.size > 0 ||
+    activeCourses.size > 0 ||
+    activeProteins.size > 0 ||
+    maxPrep > 0 ||
+    terms.length > 0
 
   function clearFilters() {
+    setActiveCourses(new Set())
     setActiveMethods(new Set())
     setActiveProteins(new Set())
     setMaxPrep(0)
@@ -196,6 +265,14 @@ export function RecipeBrowser({
       {/* Filters ------------------------------------------------------------ */}
       <div className="flex flex-wrap items-center gap-2">
         <FilterDropdown
+          label="Dish"
+          options={courses.map((c) => ({ value: c.id, label: c.name }))}
+          selected={activeCourses}
+          onToggle={(id) => toggle(setActiveCourses, id)}
+          onClear={() => setActiveCourses(new Set())}
+        />
+
+        <FilterDropdown
           label="Cooked"
           options={methods.map((m) => ({ value: m.id, label: m.name }))}
           selected={activeMethods}
@@ -219,6 +296,15 @@ export function RecipeBrowser({
           selected={new Set([String(maxPrep)])}
           onToggle={(value) => setMaxPrep(Number(value))}
           neutralValue="0"
+        />
+
+        <FilterDropdown
+          label="Sort"
+          multiple={false}
+          options={SORTS.map((o) => ({ value: o.value, label: o.label }))}
+          selected={new Set([sort])}
+          onToggle={(value) => setSort(value as SortValue)}
+          neutralValue="newest"
         />
       </div>
 
@@ -312,7 +398,7 @@ export function RecipeBrowser({
       ) : null}
 
       {/* Results ------------------------------------------------------------ */}
-      {visible.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="py-16 text-center text-ink-mute">
           Nothing matches that. Try a different ingredient or clear the filters.
         </p>
@@ -324,7 +410,7 @@ export function RecipeBrowser({
               : "flex flex-col gap-2"
           }
         >
-          {visible.map((recipe) => (
+          {sorted.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
@@ -333,6 +419,7 @@ export function RecipeBrowser({
               selected={selected.has(recipe.id)}
               onSelect={(id) => toggle(setSelected, id)}
               onDelete={selecting ? undefined : handleDelete}
+              onExport={selecting ? undefined : handleExport}
               deleting={pending && deletingId === recipe.id}
             />
           ))}
