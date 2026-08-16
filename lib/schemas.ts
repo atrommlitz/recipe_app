@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { METHOD_NAMES, type MethodName } from "@/lib/steps"
+
 /**
  * The shape shared by the manual form, the link importer and the Paprika
  * importer. Kept deliberately flat and free of numeric constraints so it can
@@ -26,7 +28,16 @@ export const recipeDraftSchema = z.object({
   prep_time_minutes: z.number().nullable().describe("Prep time in whole minutes, or null."),
   cook_time_minutes: z.number().nullable().describe("Cook time in whole minutes, or null."),
   ingredients: z.array(ingredientDraftSchema),
-  steps: z.array(z.string()).describe("Method steps in order, one instruction per entry, without leading numbers."),
+  steps: z
+    .array(z.string())
+    .describe(
+      "Instructions in order, ONE action per entry, without leading numbers. Never return the whole method as a single entry — split it.",
+    ),
+  cooking_methods: z
+    .array(z.enum(METHOD_NAMES))
+    .describe(
+      "Which of the fixed cooking methods this recipe uses, judged from the instructions and equipment. Usually one or two. Empty if genuinely unclear.",
+    ),
   notes: z
     .string()
     .nullable()
@@ -36,14 +47,21 @@ export const recipeDraftSchema = z.object({
 export type IngredientDraft = z.infer<typeof ingredientDraftSchema>
 export type RecipeDraft = z.infer<typeof recipeDraftSchema>
 
-/** A draft plus the fields the model never supplies. */
-export type EditableRecipe = RecipeDraft & {
+/**
+ * A draft plus the fields the model never supplies.
+ *
+ * `cooking_methods` is required on RecipeDraft because the model must always
+ * answer it, but optional here: by the time a recipe reaches the form it's the
+ * resolved `cooking_method_ids` that matter, and hand-written recipes never
+ * have the name list at all.
+ */
+export type EditableRecipe = Omit<RecipeDraft, "cooking_methods"> & {
+  cooking_methods?: MethodName[]
   image_url: string | null
   source_url: string | null
   /**
-   * Optional so importers don't have to supply it — an imported recipe simply
-   * has no cooking methods until someone edits it. Undefined is treated as an
-   * empty list on save.
+   * Undefined means "this caller doesn't manage methods" and leaves existing
+   * tags alone on save; an empty array clears them.
    */
   cooking_method_ids?: string[]
 }

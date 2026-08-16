@@ -7,6 +7,8 @@
  * 3. Nothing usable — the caller falls back to asking for pasted text.
  */
 
+import { splitIntoSteps } from "@/lib/steps"
+
 export type JsonLdRecipe = {
   title: string
   imageUrl: string | null
@@ -52,9 +54,9 @@ function flattenInstructions(value: unknown, out: string[] = []): string[] {
   if (!value) return out
 
   if (typeof value === "string") {
-    // Some sites dump the whole method into one string.
-    const text = decodeEntities(stripTags(value)).trim()
-    if (text) out.push(text)
+    // Plenty of sites dump the whole method into one string — split it so
+    // each instruction lands as its own step rather than one wall of text.
+    out.push(...splitIntoSteps(decodeEntities(stripTags(value))))
     return out
   }
 
@@ -74,8 +76,7 @@ function flattenInstructions(value: unknown, out: string[] = []): string[] {
 
     const text = obj.text ?? obj.name
     if (typeof text === "string") {
-      const clean = decodeEntities(stripTags(text)).trim()
-      if (clean) out.push(clean)
+      out.push(...splitIntoSteps(decodeEntities(stripTags(text))))
     }
   }
 

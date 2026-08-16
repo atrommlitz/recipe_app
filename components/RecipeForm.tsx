@@ -298,9 +298,9 @@ export function RecipeForm({
           </button>
         </section>
 
-        {/* Method --------------------------------------------------------- */}
+        {/* Instructions --------------------------------------------------- */}
         <section>
-          <span className={labelClass}>Method</span>
+          <span className={labelClass}>Instructions</span>
           <ul className="space-y-2">
             {steps.map((row, index) => (
               <li key={row.key} className="flex items-start gap-2">

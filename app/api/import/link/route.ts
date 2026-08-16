@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { MissingApiKeyError, parseIngredientGroups, parseRecipeFromText } from "@/lib/anthropic"
 import { extractJsonLdRecipe, extractOpenGraph, htmlToText } from "@/lib/extract"
+import { methodIdsByName } from "@/lib/queries"
+import { inferMethods } from "@/lib/steps"
 import type { EditableRecipe } from "@/lib/schemas"
 
 export const maxDuration = 120
@@ -36,7 +38,12 @@ export async function POST(request: Request) {
     if (pastedText) {
       const draft = await parseRecipeFromText(pastedText, rawUrl)
       return NextResponse.json({
-        recipe: { ...draft, image_url: null, source_url: rawUrl ?? null } satisfies EditableRecipe,
+        recipe: {
+          ...draft,
+          image_url: null,
+          source_url: rawUrl ?? null,
+          cooking_method_ids: await methodIdsByName(draft.cooking_methods),
+        } satisfies EditableRecipe,
         via: "pasted-text",
       })
     }
@@ -82,6 +89,10 @@ export async function POST(request: Request) {
       // The structure is already reliable; the model only splits ingredients.
       const [ingredients] = await parseIngredientGroups([jsonLd.ingredientLines])
 
+      // This path never runs the full model pass, so methods come from
+      // keyword inference over the instructions we just extracted.
+      const methodNames = inferMethods([jsonLd.title, ...jsonLd.steps].join("\n"))
+
       return NextResponse.json({
         recipe: {
           title: jsonLd.title,
@@ -91,8 +102,10 @@ export async function POST(request: Request) {
           ingredients,
           steps: jsonLd.steps,
           notes: jsonLd.notes,
+          cooking_methods: methodNames,
           image_url: jsonLd.imageUrl,
           source_url: rawUrl,
+          cooking_method_ids: await methodIdsByName(methodNames),
         } satisfies EditableRecipe,
         via: "json-ld",
       })
@@ -139,6 +152,7 @@ export async function POST(request: Request) {
         ...draft,
         image_url: og.image ?? null,
         source_url: rawUrl,
+        cooking_method_ids: await methodIdsByName(draft.cooking_methods),
       } satisfies EditableRecipe,
       via: "model",
     })

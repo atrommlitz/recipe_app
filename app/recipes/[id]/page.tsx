@@ -128,7 +128,7 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
 
         {recipe.steps.length > 0 ? (
           <section className="mt-10">
-            <h2 className="eyebrow !text-ink-mute mb-3">Method</h2>
+            <h2 className="eyebrow !text-ink-mute mb-3">Instructions</h2>
             <ol className="border-t border-rule">
               {recipe.steps.map((step, index) => (
                 <li key={step.id} className="flex gap-4 border-b border-rule py-4">

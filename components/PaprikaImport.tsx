@@ -7,6 +7,7 @@ import { buttonPrimary, buttonQuiet } from "@/components/ui"
 import { importRecipes, type ImportFailure } from "@/app/import/actions"
 import { mapPaprikaRecipe, unpackArchive } from "@/lib/paprika"
 import { base64ToBlob, uploadImage } from "@/lib/upload"
+import type { CookingMethod } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
 
 // 10 recipes per Claude call turns ~87 calls into ~9.
@@ -18,7 +19,9 @@ type Phase = "idle" | "unpacking" | "photos" | "parsing" | "inserting" | "done" 
 
 type Progress = { done: number; total: number }
 
-export function PaprikaImport() {
+export function PaprikaImport({ methods }: { methods: CookingMethod[] }) {
+  const methodIdByName = new Map(methods.map((m) => [m.name.toLowerCase(), m.id]))
+
   const inputRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>("idle")
   const [progress, setProgress] = useState<Progress>({ done: 0, total: 0 })
@@ -105,6 +108,9 @@ export function PaprikaImport() {
             ...entry.base,
             image_url: imageUrls[start + index],
             ingredients: data.results[index] ?? [],
+            cooking_method_ids: entry.methodNames
+              .map((name) => methodIdByName.get(name.toLowerCase()))
+              .filter((id): id is string => Boolean(id)),
           })
         })
 

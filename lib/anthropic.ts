@@ -38,8 +38,17 @@ Rules:
 - unit is null when the item is counted rather than measured (e.g. "2 eggs" -> quantity 2, unit null, item "eggs").
 - Keep preparation notes on the item, e.g. "large eggs, beaten".
 - Times are whole minutes. "1 hr 30 min" -> 90. Use null when not stated.
-- Steps are the method only. Put tips, storage and serving suggestions in notes.
+- Steps are the instructions only. Put tips, storage and serving suggestions in notes.
 - Strip leading step numbers from instructions.
+- Split the instructions into one action per step. If the source runs them
+  together as a paragraph, break it up. Never return the whole method as a
+  single step.
+- Set cooking_methods from what the instructions actually describe:
+  "bake"/"roast"/"preheat the oven" -> Oven; "skillet"/"saucepan"/"simmer"/
+  "sear" -> Stovetop; "slow cooker" -> Crockpot; "pressure cook" -> Instant Pot;
+  "grill"/"barbecue" -> Grill; "air fryer" -> Air Fryer; nothing heated at all
+  -> No-Cook. A recipe can use more than one (searing then braising in the oven
+  is both Stovetop and Oven). Never combine No-Cook with a heat-based method.
 - If the text is not a recipe, return an empty ingredients array and an empty steps array.`
 
 /** Full extraction from unstructured page text or a pasted caption. */

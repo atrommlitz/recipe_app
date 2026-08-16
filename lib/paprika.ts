@@ -1,5 +1,6 @@
 import { gunzipSync, unzipSync } from "fflate"
 
+import { inferMethods, splitIntoSteps, stripStepMarker } from "@/lib/steps"
 import type { EditableRecipe } from "@/lib/schemas"
 
 /**
@@ -98,14 +99,12 @@ export function parseServings(value: string | undefined): number | null {
   return n > 0 ? n : null
 }
 
-/** Paprika keeps directions as one newline-separated string. */
+/** Paprika keeps ingredients as one newline-separated string. */
 export function splitLines(value: string | undefined): string[] {
   if (!value) return []
   return value
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    // Drop leading "1." / "1)" / "- " that Paprika users often type by hand.
-    .map((line) => line.replace(/^(?:\d{1,2}[.)]\s+|[-*•]\s+)/, "").trim())
+    .map((line) => stripStepMarker(line))
     .filter((line) => line.length > 0)
 }
 
@@ -120,6 +119,7 @@ export function mapPaprikaRecipe(recipe: PaprikaRecipe): {
   base: Omit<EditableRecipe, "ingredients">
   ingredientLines: string[]
   photoBase64: string | null
+  methodNames: string[]
 } {
   const notes = [
     recipe.notes?.trim(),
@@ -128,18 +128,26 @@ export function mapPaprikaRecipe(recipe: PaprikaRecipe): {
     .filter(Boolean)
     .join("\n\n")
 
+  const title = recipe.name?.trim() || "Untitled recipe"
+  // Handles both the usual one-per-line directions and the occasional
+  // single-paragraph blob.
+  const steps = splitIntoSteps(recipe.directions)
+
   return {
     base: {
-      title: recipe.name?.trim() || "Untitled recipe",
+      title,
       servings: parseServings(recipe.servings),
       prep_time_minutes: parseTimeToMinutes(recipe.prep_time),
       cook_time_minutes: parseTimeToMinutes(recipe.cook_time),
-      steps: splitLines(recipe.directions),
+      steps,
       notes: notes || null,
       image_url: recipe.image_url?.trim() || null,
       source_url: recipe.source_url?.trim() || null,
     },
     ingredientLines: splitLines(recipe.ingredients),
     photoBase64: recipe.photo || recipe.photo_data || null,
+    // Keyword guess rather than a model call — tagging 87 recipes shouldn't
+    // cost 87 extra requests, and these are easy to correct by hand.
+    methodNames: inferMethods([title, ...steps].join("\n")),
   }
 }

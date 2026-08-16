@@ -60,6 +60,24 @@ export async function getCookingMethods(): Promise<CookingMethod[]> {
   return data ?? []
 }
 
+/**
+ * Resolves cooking method names (from the model, or from keyword inference)
+ * to the seeded row ids. Unknown names are dropped rather than created — the
+ * set is deliberately fixed.
+ */
+export async function methodIdsByName(names: string[]): Promise<string[]> {
+  if (!names || names.length === 0) return []
+
+  const supabase = await createClient()
+  const { data } = await supabase.from("cooking_methods").select("id, name")
+  if (!data) return []
+
+  const byName = new Map(data.map((m) => [m.name.toLowerCase(), m.id]))
+  return names
+    .map((name) => byName.get(name.trim().toLowerCase()))
+    .filter((id): id is string => Boolean(id))
+}
+
 /** Most recent cook date for a recipe, or null if it's never been made. */
 export function lastCookedAt(recipe: {
   cook_log: { cooked_at: string }[]
