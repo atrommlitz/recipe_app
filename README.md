@@ -2,6 +2,13 @@
 
 A shared recipe app for two people. Next.js 16 (App Router) · Supabase · Tailwind v4 · Claude.
 
+**Live:** https://recipe-app-atrommlitzs-projects.vercel.app
+
+Vercel Authentication is deliberately off for this project — the app has its own
+password gate, and leaving Vercel's SSO on would mean every device had to be
+logged into Vercel first. That does mean the app password is the only thing in
+front of it, including in front of the Anthropic key the importers spend.
+
 ## Running it
 
 ```bash
