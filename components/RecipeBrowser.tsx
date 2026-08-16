@@ -8,11 +8,16 @@ import { AddRecipeButton } from "@/components/AddRecipeButton"
 import { FilterDropdown } from "@/components/FilterDropdown"
 import { RecipeCard, type ViewMode } from "@/components/RecipeCard"
 import { Toast, useToast } from "@/components/Toast"
-import { buttonPrimary, buttonQuiet, inputClass } from "@/components/ui"
-import { deleteRecipe } from "@/app/recipes/actions"
+import { buttonDanger, buttonPrimary, buttonQuiet, inputClass } from "@/components/ui"
+import { deleteRecipes } from "@/app/recipes/actions"
 import { buildGroceryList, copyText } from "@/lib/grocery"
 import { inferProteins, PROTEIN_GROUPS, type ProteinGroup } from "@/lib/protein"
-import { exportFilename, shareOrDownload, toPaprikaFile } from "@/lib/paprika-export"
+import {
+  exportFilename,
+  shareOrDownload,
+  toPaprikaArchive,
+  toPaprikaFile,
+} from "@/lib/paprika-export"
 import type { CookingMethod, Course } from "@/lib/database.types"
 import type { GridRecipe } from "@/lib/queries"
 
@@ -108,7 +113,7 @@ export function RecipeBrowser({
   const view = useSyncExternalStore(subscribeToView, readView, readServerView)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [toast, setToast] = useToast()
 
   const terms = useMemo(
@@ -183,8 +188,23 @@ export function RecipeBrowser({
     })
   }
 
+  /** Selection survives filtering, so read it back off the full library. */
+  const chosen = useMemo(
+    () => recipes.filter((r) => selected.has(r.id)),
+    [recipes, selected],
+  )
+
+  function endSelecting() {
+    setSelecting(false)
+    setSelected(new Set())
+    setConfirmingDelete(false)
+  }
+
+  function countLabel(n: number) {
+    return n === 1 ? "1 recipe" : `${n} recipes`
+  }
+
   async function copyGroceryList() {
-    const chosen = recipes.filter((r) => selected.has(r.id))
     if (chosen.length === 0) return
 
     const ok = await copyText(
@@ -192,41 +212,47 @@ export function RecipeBrowser({
     )
     setToast(
       ok
-        ? `Copied ${chosen.length === 1 ? "1 recipe" : `${chosen.length} recipes`} to clipboard`
+        ? `Copied ${countLabel(chosen.length)} to clipboard`
         : "Couldn't copy — check clipboard permissions",
     )
-    if (ok) {
-      setSelecting(false)
-      setSelected(new Set())
-    }
+    if (ok) endSelecting()
   }
 
-  async function handleExport(id: string) {
-    const recipe = recipes.find((r) => r.id === id)
-    if (!recipe) return
+  async function handleExport() {
+    if (chosen.length === 0) return
 
     try {
       // Built synchronously from data already loaded, so the click's user
       // gesture survives into navigator.share — iOS drops the share sheet
       // otherwise.
-      const where = await shareOrDownload(toPaprikaFile(recipe))
-      if (where === "downloaded") setToast(`Saved ${exportFilename(recipe.title)}`)
+      const file =
+        chosen.length === 1 ? toPaprikaFile(chosen[0]) : toPaprikaArchive(chosen)
+      const where = await shareOrDownload(file)
+      if (where === "downloaded") {
+        setToast(
+          `Saved ${chosen.length === 1 ? exportFilename(chosen[0].title) : file.name}`,
+        )
+      }
+      endSelecting()
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "Couldn't export that recipe.")
+      setToast(e instanceof Error ? e.message : "Couldn't export that.")
     }
   }
 
-  function handleDelete(id: string) {
-    const recipe = recipes.find((r) => r.id === id)
-    setDeletingId(id)
+  function handleDelete() {
+    const ids = chosen.map((r) => r.id)
+    const label = chosen.length === 1 ? chosen[0].title : countLabel(chosen.length)
+    if (ids.length === 0) return
+
     startTransition(async () => {
-      const result = await deleteRecipe(id)
-      setDeletingId(null)
+      const result = await deleteRecipes(ids)
       if ("error" in result) {
         setToast(result.error)
+        setConfirmingDelete(false)
         return
       }
-      setToast(`Deleted ${recipe?.title ?? "recipe"}`)
+      endSelecting()
+      setToast(`Deleted ${label}`)
       router.refresh()
     })
   }
@@ -247,7 +273,13 @@ export function RecipeBrowser({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-6 pb-28 sm:px-6">
+    <div
+      className={`mx-auto max-w-5xl px-4 pt-6 sm:px-6 ${
+        // Clear whichever floating thing is on screen: the add button, or the
+        // taller action bar once recipes are selected.
+        selecting && selected.size > 0 ? "pb-44" : "pb-28"
+      }`}
+    >
       <div className="mb-3">
         <label htmlFor="search" className="sr-only">
           Search recipes and ingredients
@@ -371,10 +403,7 @@ export function RecipeBrowser({
           {selecting ? (
             <button
               type="button"
-              onClick={() => {
-                setSelecting(false)
-                setSelected(new Set())
-              }}
+              onClick={endSelecting}
               className="text-ink-mute hover:text-ink"
             >
               Cancel
@@ -385,15 +414,15 @@ export function RecipeBrowser({
               onClick={() => setSelecting(true)}
               className="text-ink-mute hover:text-accent"
             >
-              Grocery list
+              Select
             </button>
           )}
         </div>
       </div>
 
-      {selecting ? (
+      {selecting && selected.size === 0 ? (
         <p className="mb-4 rounded-[2px] border border-rule bg-card px-3 py-2 text-sm text-ink-mute">
-          Tap the recipes you&apos;re shopping for, then copy the combined list.
+          Tap recipes to select them.
         </p>
       ) : null}
 
@@ -421,33 +450,79 @@ export function RecipeBrowser({
               selectable={selecting}
               selected={selected.has(recipe.id)}
               onSelect={(id) => toggle(setSelected, id)}
-              onDelete={selecting ? undefined : handleDelete}
-              onExport={selecting ? undefined : handleExport}
-              deleting={pending && deletingId === recipe.id}
             />
           ))}
         </div>
       )}
 
+      {/* Action bar: appears on the first selection, the way a photo picker does.
+          Everything that used to sit on the cards themselves lives here. */}
       {selecting && selected.size > 0 ? (
         <div
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-card px-4 py-3"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-card px-4 pt-3"
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
         >
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-            <span className="tnum text-sm text-ink-mute">{selected.size} selected</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setSelected(new Set())}
-                className={buttonQuiet}
-              >
-                Clear
-              </button>
-              <button type="button" onClick={copyGroceryList} className={buttonPrimary}>
-                Copy grocery list
-              </button>
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+              <span className="tnum text-ink-mute">{selected.size} selected</span>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set(sorted.map((r) => r.id)))}
+                  className="text-ink-mute hover:text-accent"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="text-ink-mute hover:text-ink"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
+
+            {confirmingDelete ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-ink">
+                  Delete {countLabel(selected.size)}? This can&apos;t be undone.
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    className={buttonQuiet}
+                  >
+                    Keep
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={handleDelete}
+                    className={buttonDanger}
+                  >
+                    {pending ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={copyGroceryList} className={buttonPrimary}>
+                  Grocery list
+                </button>
+                <button type="button" onClick={handleExport} className={buttonQuiet}>
+                  Export
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className={buttonDanger}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : null}

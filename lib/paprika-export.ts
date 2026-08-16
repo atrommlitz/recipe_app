@@ -1,4 +1,4 @@
-import { gzipSync } from "fflate"
+import { gzipSync, zipSync } from "fflate"
 
 import { formatMinutes, formatQuantity } from "@/lib/format"
 
@@ -87,16 +87,53 @@ export function exportFilename(title: string): string {
 
 export function toPaprikaFile(recipe: ExportableRecipe): File {
   const json = JSON.stringify(toPaprikaJson(recipe))
-  const gzipped = gzipSync(new TextEncoder().encode(json))
 
   // Copy into a plain ArrayBuffer — fflate returns a view over a larger
   // pooled buffer, and handing that straight to File would include the slack.
-  const bytes = new Uint8Array(gzipped.length)
-  bytes.set(gzipped)
+  const bytes = detach(gzipSync(new TextEncoder().encode(json)))
 
   return new File([bytes], exportFilename(recipe.title), {
     type: "application/gzip",
   })
+}
+
+/** Strips fflate's view off the pooled buffer it was allocated from. */
+function detach(view: Uint8Array): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(new ArrayBuffer(view.length))
+  bytes.set(view)
+  return bytes
+}
+
+/**
+ * Many recipes go out as a `.paprikarecipes` archive — a ZIP of the same
+ * gzipped documents, which is exactly what Paprika's own bulk export writes
+ * and what this app's importer already reads.
+ */
+export function toPaprikaArchive(
+  recipes: ExportableRecipe[],
+  name = "Index recipes",
+): File {
+  const entries: Record<string, Uint8Array> = {}
+  const used = new Map<string, number>()
+
+  for (const recipe of recipes) {
+    let entry = exportFilename(recipe.title)
+    // Two recipes can share a title; a ZIP can't share an entry name.
+    const seen = used.get(entry)
+    if (seen !== undefined) {
+      used.set(entry, seen + 1)
+      entry = entry.replace(/\.paprikarecipe$/, ` (${seen + 1}).paprikarecipe`)
+    } else {
+      used.set(entry, 0)
+    }
+
+    entries[entry] = gzipSync(new TextEncoder().encode(JSON.stringify(toPaprikaJson(recipe))))
+  }
+
+  // level 0 — the entries are already gzipped, so deflating again buys nothing.
+  const zipped = detach(zipSync(entries, { level: 0 }))
+
+  return new File([zipped], `${name}.paprikarecipes`, { type: "application/zip" })
 }
 
 /**

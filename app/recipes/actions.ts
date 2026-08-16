@@ -150,8 +150,17 @@ export async function deleteCookLogEntry(
 export async function deleteRecipe(
   id: string,
 ): Promise<{ error: string } | { ok: true }> {
+  return deleteRecipes([id])
+}
+
+/** Deletes a batch in one round trip — what selection mode sends. */
+export async function deleteRecipes(
+  ids: string[],
+): Promise<{ error: string } | { ok: true }> {
+  if (ids.length === 0) return { ok: true }
+
   const supabase = await createClient()
-  const { error } = await supabase.from("recipes").delete().eq("id", id)
+  const { error } = await supabase.from("recipes").delete().in("id", ids)
   if (error) return { error: error.message }
 
   revalidatePath("/")
