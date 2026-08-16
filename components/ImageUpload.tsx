@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useRef, useState } from "react"
 
 import { buttonQuiet, labelClass } from "@/components/ui"
+import { IMAGE_ACCEPT, toJpegBlob } from "@/lib/image"
 import { uploadImage } from "@/lib/upload"
 
 export function ImageUpload({
@@ -21,7 +22,10 @@ export function ImageUpload({
     setBusy(true)
     setError(null)
     try {
-      onChange(await uploadImage(file, file.name))
+      // Re-encoded rather than uploaded as-is: an iPhone HEIC stored raw would
+      // only display in Safari, and this caps the file size while it's here.
+      const jpeg = await toJpegBlob(file)
+      onChange(await uploadImage(jpeg, "photo.jpg"))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.")
     } finally {
@@ -46,7 +50,7 @@ export function ImageUpload({
           onClick={() => inputRef.current?.click()}
           className={buttonQuiet}
         >
-          {busy ? "Uploading…" : value ? "Replace photo" : "Choose photo"}
+          {busy ? "Processing…" : value ? "Replace photo" : "Choose photo"}
         </button>
 
         {value ? (
@@ -63,7 +67,7 @@ export function ImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={IMAGE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]

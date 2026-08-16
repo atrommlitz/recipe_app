@@ -5,7 +5,7 @@ import { useRef, useState } from "react"
 
 import { buttonPrimary, buttonQuiet } from "@/components/ui"
 import { importRecipes, type ImportFailure } from "@/app/import/actions"
-import { prepareImage, type PreparedImage } from "@/lib/image"
+import { IMAGE_ACCEPT, prepareImage, type PreparedImage } from "@/lib/image"
 import { uploadImage } from "@/lib/upload"
 import type { CookingMethod } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
@@ -201,7 +201,7 @@ export function BulkPhotoImport({ methods }: { methods: CookingMethod[] }) {
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept={IMAGE_ACCEPT}
             multiple
             className="hidden"
             onChange={(e) => {

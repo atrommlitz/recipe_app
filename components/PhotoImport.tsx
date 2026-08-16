@@ -5,7 +5,7 @@ import { useRef, useState } from "react"
 
 import { RecipeForm } from "@/components/RecipeForm"
 import { buttonPrimary, buttonQuiet, labelClass } from "@/components/ui"
-import { prepareImage, type PreparedImage } from "@/lib/image"
+import { IMAGE_ACCEPT, prepareImage, type PreparedImage } from "@/lib/image"
 import type { CookingMethod } from "@/lib/database.types"
 import type { EditableRecipe } from "@/lib/schemas"
 
@@ -15,6 +15,7 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [images, setImages] = useState<PreparedImage[]>([])
   const [busy, setBusy] = useState(false)
+  const [preparing, setPreparing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState<EditableRecipe | null>(null)
 
@@ -26,6 +27,9 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
       return
     }
 
+    // HEIC photos are decoded in WebAssembly and take a few seconds each, so
+    // this needs to say something rather than just going quiet.
+    setPreparing(true)
     setBusy(true)
     try {
       const prepared: PreparedImage[] = []
@@ -36,6 +40,7 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read that image.")
     } finally {
+      setPreparing(false)
       setBusy(false)
     }
   }
@@ -139,7 +144,11 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
             onClick={() => inputRef.current?.click()}
             className={buttonQuiet}
           >
-            {images.length === 0 ? "Choose photos" : "Add another page"}
+            {preparing
+              ? "Preparing…"
+              : images.length === 0
+                ? "Choose photos"
+                : "Add another page"}
           </button>
 
           <button
@@ -155,7 +164,7 @@ export function PhotoImport({ methods }: { methods: CookingMethod[] }) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={IMAGE_ACCEPT}
           multiple
           // capture="environment" would force the camera and block the photo
           // library, which is the wrong default for a cookbook on the counter.
