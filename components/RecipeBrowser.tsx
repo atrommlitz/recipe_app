@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react"
 
 import { AddRecipeButton } from "@/components/AddRecipeButton"
-import { MethodToggle } from "@/components/MethodChip"
+import { FilterDropdown } from "@/components/FilterDropdown"
 import { RecipeCard, type ViewMode } from "@/components/RecipeCard"
 import { Toast, useToast } from "@/components/Toast"
 import { buttonPrimary, buttonQuiet, inputClass } from "@/components/ui"
@@ -49,10 +49,10 @@ function writeView(next: ViewMode) {
 
 /** Prep-time buckets, in minutes. 0 means no limit. */
 const PREP_BUCKETS = [
-  { label: "Any prep", max: 0 },
-  { label: "≤ 15 min", max: 15 },
-  { label: "≤ 30 min", max: 30 },
-  { label: "≤ 1 hr", max: 60 },
+  { label: "Any", max: 0 },
+  { label: "15 min or less", max: 15 },
+  { label: "30 min or less", max: 30 },
+  { label: "1 hour or less", max: 60 },
 ] as const
 
 function matchesSearch(recipe: GridRecipe, terms: string[]): boolean {
@@ -194,42 +194,32 @@ export function RecipeBrowser({
       </div>
 
       {/* Filters ------------------------------------------------------------ */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="eyebrow mr-1 w-14 shrink-0">Cooked</span>
-          {methods.map((method) => (
-            <MethodToggle
-              key={method.id}
-              name={method.name}
-              selected={activeMethods.has(method.id)}
-              onToggle={() => toggle(setActiveMethods, method.id)}
-            />
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterDropdown
+          label="Cooked"
+          options={methods.map((m) => ({ value: m.id, label: m.name }))}
+          selected={activeMethods}
+          onToggle={(id) => toggle(setActiveMethods, id)}
+          onClear={() => setActiveMethods(new Set())}
+        />
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="eyebrow mr-1 w-14 shrink-0">Protein</span>
-          {PROTEIN_GROUPS.map((group) => (
-            <MethodToggle
-              key={group}
-              name={group}
-              selected={activeProteins.has(group)}
-              onToggle={() => toggle(setActiveProteins, group)}
-            />
-          ))}
-        </div>
+        <FilterDropdown
+          label="Protein"
+          options={PROTEIN_GROUPS.map((g) => ({ value: g, label: g }))}
+          selected={activeProteins}
+          onToggle={(g) => toggle(setActiveProteins, g as ProteinGroup)}
+          onClear={() => setActiveProteins(new Set())}
+        />
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="eyebrow mr-1 w-14 shrink-0">Prep</span>
-          {PREP_BUCKETS.map((bucket) => (
-            <MethodToggle
-              key={bucket.label}
-              name={bucket.label}
-              selected={maxPrep === bucket.max}
-              onToggle={() => setMaxPrep(bucket.max)}
-            />
-          ))}
-        </div>
+        {/* Single-select: the buckets nest, so more than one is meaningless. */}
+        <FilterDropdown
+          label="Prep"
+          multiple={false}
+          options={PREP_BUCKETS.map((b) => ({ value: String(b.max), label: b.label }))}
+          selected={new Set([String(maxPrep)])}
+          onToggle={(value) => setMaxPrep(Number(value))}
+          neutralValue="0"
+        />
       </div>
 
       {/* Header row --------------------------------------------------------- */}
