@@ -406,7 +406,10 @@ export function RecipeBrowser({
         <div
           className={
             view === "grid"
-              ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              ? // Dense browse wall: three across on a phone, growing on wider
+                // screens so the tiles stay roughly thumb-sized rather than
+                // ballooning to three enormous cards.
+                "grid grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-4 sm:gap-x-3 lg:grid-cols-5"
               : "flex flex-col gap-2"
           }
         >
