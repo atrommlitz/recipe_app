@@ -62,7 +62,7 @@ export function LinkImport({
     return (
       <div>
         <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
-          <div className="border border-rule bg-card p-3 rounded-[2px]">
+          <div className="border border-rule bg-card p-3 rounded-card">
             <p className="text-sm text-ink">
               <span className="eyebrow mr-2">Preview</span>
               {via ? VIA_LABEL[via] : ""} Check it over, fix anything wrong, then

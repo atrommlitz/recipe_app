@@ -52,7 +52,7 @@ export function RecipeScaler({
           <div
             role="group"
             aria-label="Scale ingredient quantities"
-            className="flex overflow-hidden rounded-[2px] border border-rule"
+            className="flex overflow-hidden rounded-ui border border-rule"
           >
             {MULTIPLIERS.map((m) => {
               const active = m === multiplier

@@ -38,7 +38,7 @@ export function ImageUpload({
       <span className={labelClass}>Photo</span>
 
       {value ? (
-        <div className="relative mb-2 aspect-[4/3] w-full max-w-xs overflow-hidden rounded-[2px] border border-rule bg-ground">
+        <div className="relative mb-2 aspect-[4/3] w-full max-w-xs overflow-hidden rounded-card border border-rule bg-ground">
           <Image src={value} alt="" fill sizes="320px" className="object-cover" />
         </div>
       ) : null}

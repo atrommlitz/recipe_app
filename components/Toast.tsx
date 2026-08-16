@@ -22,7 +22,7 @@ export function Toast({ message }: { message: string | null }) {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 rounded-[2px] border border-rule bg-ink px-4 py-2 text-sm text-ground shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+      className="pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 rounded-ui border border-rule bg-ink px-4 py-2 text-sm text-ground shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
       style={{ bottom: "calc(max(env(safe-area-inset-bottom), 1rem) + 5rem)" }}
     >
       {message}

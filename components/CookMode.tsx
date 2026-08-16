@@ -169,7 +169,7 @@ export function CookMode({
           type="button"
           onClick={prev}
           disabled={atStart}
-          className="flex-1 rounded-[2px] border py-6 text-lg font-semibold disabled:opacity-30"
+          className="flex-1 rounded-ui border py-6 text-lg font-semibold disabled:opacity-30"
           style={{ borderColor: "#3A362F", color: PAPER }}
         >
           Back
@@ -178,7 +178,7 @@ export function CookMode({
         {atEnd ? (
           <Link
             href={`/recipes/${recipeId}`}
-            className="flex-[2] rounded-[2px] py-6 text-center text-lg font-semibold"
+            className="flex-[2] rounded-ui py-6 text-center text-lg font-semibold"
             style={{ background: ACCENT, color: GROUND }}
           >
             Done
@@ -187,7 +187,7 @@ export function CookMode({
           <button
             type="button"
             onClick={next}
-            className="flex-[2] rounded-[2px] py-6 text-lg font-semibold"
+            className="flex-[2] rounded-ui py-6 text-lg font-semibold"
             style={{ background: ACCENT, color: GROUND }}
           >
             Next

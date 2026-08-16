@@ -1,7 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { after } from "next/server"
 
+import { ensureCover } from "@/lib/cover"
 import { createClient } from "@/lib/supabase/server"
 import type { EditableRecipe } from "@/lib/schemas"
 
@@ -107,6 +109,22 @@ export async function saveRecipe(
       )
       if (error) return { error: error.message }
     }
+  }
+
+  // New recipes get cover art once the save has already returned — generation
+  // takes 10–20 seconds, and nobody should wait on a picture. Editing an
+  // existing recipe is left alone: removing a photo there is a deliberate act.
+  if (!id) {
+    const newId = recipeId
+    after(async () => {
+      const result = await ensureCover(newId)
+      if (result.status === "failed") {
+        console.error(`Cover art for ${newId} failed: ${result.error}`)
+      } else if (result.status === "generated") {
+        revalidatePath("/")
+        revalidatePath(`/recipes/${newId}`)
+      }
+    })
   }
 
   revalidatePath("/")

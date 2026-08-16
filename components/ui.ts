@@ -1,6 +1,8 @@
 /**
  * Shared class strings so every surface in the app derives from the same
- * ledger tokens. Keep radii at 2px or 0 — nothing in this design is pill-shaped.
+ * ledger tokens. Corners come from two theme radii — `rounded-ui` for anything
+ * you press, `rounded-card` for anything that holds content. Don't hardcode a
+ * pixel radius at the call site.
  */
 
 /**
@@ -10,22 +12,22 @@
  * their own width.
  */
 export const inputClass =
-  "border border-rule bg-card px-3 py-2 text-ink rounded-[2px] " +
+  "border border-rule bg-card px-3 py-2 text-ink rounded-ui " +
   "placeholder:text-ink-mute/60 focus:border-accent focus:outline-none"
 
 export const labelClass = "eyebrow block mb-1.5"
 
 export const buttonPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-[2px] bg-accent px-4 py-2 " +
+  "inline-flex items-center justify-center gap-2 rounded-ui bg-accent px-4 py-2 " +
   "font-display text-sm font-semibold text-accent-ink transition-opacity " +
   "hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 
 export const buttonQuiet =
-  "inline-flex items-center justify-center gap-2 rounded-[2px] border border-rule " +
+  "inline-flex items-center justify-center gap-2 rounded-ui border border-rule " +
   "bg-card px-4 py-2 font-display text-sm font-medium text-ink transition-colors " +
   "hover:border-ink-mute disabled:cursor-not-allowed disabled:opacity-50"
 
 export const buttonDanger =
-  "inline-flex items-center justify-center gap-2 rounded-[2px] border border-alert " +
+  "inline-flex items-center justify-center gap-2 rounded-ui border border-alert " +
   "px-4 py-2 font-display text-sm font-medium text-alert transition-colors " +
   "hover:bg-alert hover:text-accent-ink disabled:cursor-not-allowed disabled:opacity-50"

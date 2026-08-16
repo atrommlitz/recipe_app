@@ -164,7 +164,7 @@ export function RandomPicker({
 
       {/* Result ------------------------------------------------------------ */}
       {rolling ? (
-        <div className="mt-8 border border-rule bg-card p-6 text-center rounded-[2px]">
+        <div className="mt-8 border border-rule bg-card p-6 text-center rounded-card">
           <p className="font-display text-xl font-bold text-ink-mute">
             {shuffleTitle || "…"}
           </p>
@@ -174,7 +174,7 @@ export function RandomPicker({
       {picked && !rolling ? (
         <div
           key={picked.id}
-          className="mt-8 overflow-hidden border border-rule bg-card rounded-[2px] motion-safe:animate-[pick-in_320ms_ease-out]"
+          className="mt-8 overflow-hidden border border-rule bg-card rounded-card motion-safe:animate-[pick-in_320ms_ease-out]"
         >
           {picked.image_url ? (
             <div className="relative aspect-[16/9] bg-ground">

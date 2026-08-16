@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className="mt-1 text-ink-mute">Our recipes, in one place.</p>
         </div>
 
-        <div className="border border-rule bg-card p-6 rounded-[2px]">
+        <div className="border border-rule bg-card p-6 rounded-card">
           <LoginForm next={next} />
         </div>
       </div>

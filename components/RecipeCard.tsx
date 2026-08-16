@@ -57,7 +57,7 @@ export function RecipeCard({
   // bordered rows, where the extra metadata has somewhere to live.
   const shell = grid
     ? "group relative block text-left"
-    : "group relative block overflow-hidden rounded-[2px] border border-rule bg-card text-left transition-colors hover:border-ink-mute"
+    : "group relative block overflow-hidden rounded-card border border-rule bg-card text-left transition-colors hover:border-ink-mute"
 
   const body = grid ? (
     <GridBody recipe={recipe} selecting={selectable} selected={selected} />
@@ -157,7 +157,7 @@ function GridBody({
 }) {
   return (
     <>
-      <div className="relative aspect-square overflow-hidden rounded-[2px] bg-card">
+      <div className="relative aspect-square overflow-hidden rounded-card bg-card">
         {/* Selecting shrinks the tile away from its slot — the photo-picker
             gesture. The tick sits outside this wrapper so it holds still. */}
         <div

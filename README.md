@@ -44,6 +44,7 @@ Models used:
 |---|---|---|
 | Link import | `claude-opus-5` | Social captions and blog prose are messy |
 | Paprika bulk | `claude-haiku-4-5` | Splitting a clean ingredient line is simple extraction |
+| Cover art triage | `claude-haiku-4-5` | Deciding "food photo or photographed recipe card?" is a glance |
 
 Bulk import batches 10 recipes per call, so an ~87-recipe library is ~9 calls.
 Prompt caching is deliberately **not** used — the system prompt is far below
@@ -62,6 +63,26 @@ Format*. The archive is unzipped in your browser, so its size doesn't matter.
 
 Paprika's `source` field (the site name) has no column in the schema, so it's
 appended to `notes`.
+
+## Cover art
+
+Much of the library came in as photographs of recipe cards, so `image_url` is
+often a picture of the *writing* rather than the dish. New recipes are checked
+after they save: Claude judges whether the stored image is really food, and if
+it isn't — or there's no image at all — a photo is generated from the title and
+ingredients and stored in the same bucket as any upload. "New photo" on a
+recipe page forces a fresh one.
+
+Images come from Vercel's [AI Gateway](https://vercel.com/docs/ai-gateway)
+(`google/imagen-4.0-fast-generate-001`, $0.02 an image). Deployments
+authenticate with their OIDC token, so there's no key to manage in production;
+locally, `vercel env pull` or an `AI_GATEWAY_API_KEY`. **The gateway needs a
+card on file before it will serve anything**, free monthly credits included.
+
+Generation runs in `after()`, so nobody waits on it — saving a recipe returns
+immediately and the picture appears on the next load. It never blocks a save:
+if the gateway is unreachable the failure is logged and the recipe keeps
+whatever image it had.
 
 ## Design
 

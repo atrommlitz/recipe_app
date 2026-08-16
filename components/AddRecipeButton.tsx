@@ -61,7 +61,7 @@ export function AddRecipeButton() {
         onClick={() => setOpen(true)}
         aria-label="Add a recipe"
         aria-haspopup="dialog"
-        className="fixed right-4 z-20 flex h-14 w-14 items-center justify-center rounded-[2px] border border-accent bg-accent text-accent-ink shadow-[0_2px_12px_rgba(0,0,0,0.18)] transition-opacity hover:opacity-90 sm:right-6"
+        className="fixed right-4 z-20 flex h-14 w-14 items-center justify-center rounded-ui border border-accent bg-accent text-accent-ink shadow-[0_2px_12px_rgba(0,0,0,0.18)] transition-opacity hover:opacity-90 sm:right-6"
         style={{ bottom: "max(env(safe-area-inset-bottom), 1rem)" }}
       >
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
@@ -85,7 +85,7 @@ export function AddRecipeButton() {
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="mx-4 border border-rule bg-card rounded-[2px]"
+          className="mx-4 border border-rule bg-card rounded-card"
         >
           <div className="flex items-baseline justify-between border-b border-rule px-4 py-3">
             <h2

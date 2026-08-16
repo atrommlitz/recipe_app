@@ -143,6 +143,48 @@ export async function parseRecipeFromImages(
   return parsed
 }
 
+const imageKindSchema = z.object({
+  kind: z
+    .enum(["food", "page", "other"])
+    .describe(
+      "food: a photograph of the finished dish or its ingredients. " +
+        "page: a photograph, scan or screenshot of written text — a cookbook " +
+        "page, a recipe card, a printed clipping, an app screenshot. " +
+        "other: anything else, including logos, blank images and unrelated scenes.",
+    ),
+})
+
+/**
+ * Judges whether a recipe's stored image is actually a picture of the food.
+ *
+ * Half the library came in from photographed recipe cards, so `image_url` is
+ * often a picture of the *writing* rather than the dish. Those want replacing;
+ * real food photos never do.
+ */
+export async function classifyRecipeImage(
+  url: string,
+): Promise<"food" | "page" | "other"> {
+  const message = await client().messages.parse({
+    model: BULK_MODEL,
+    max_tokens: 200,
+    output_config: { format: zodOutputFormat(imageKindSchema) },
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image" as const, source: { type: "url" as const, url } },
+          {
+            type: "text" as const,
+            text: "What kind of image is this? Answer with the schema.",
+          },
+        ],
+      },
+    ],
+  })
+
+  return message.parsed_output?.kind ?? "other"
+}
+
 const INGREDIENT_SYSTEM = `You split raw recipe ingredient lines into structured fields.
 
 Rules:

@@ -227,7 +227,7 @@ export function BulkPhotoImport({
               {photos.map((photo, index) => (
                 <li
                   key={index}
-                  className="relative overflow-hidden rounded-[2px] border border-rule"
+                  className="relative overflow-hidden rounded-card border border-rule"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -242,7 +242,7 @@ export function BulkPhotoImport({
                         setPhotos((current) => current.filter((_, i) => i !== index))
                       }
                       aria-label={`Remove ${photo.name}`}
-                      className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-[2px] bg-ink/80 text-ground"
+                      className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-ui bg-ink/80 text-ground"
                     >
                       ×
                     </button>
@@ -255,7 +255,7 @@ export function BulkPhotoImport({
       ) : null}
 
       {busy ? (
-        <div className="mt-6 rounded-[2px] border border-rule bg-card p-4">
+        <div className="mt-6 rounded-card border border-rule bg-card p-4">
           <p className="tnum text-sm text-ink">{label[phase]}</p>
           {progress.total > 0 ? (
             <div className="mt-2 h-1 w-full bg-ground">
@@ -279,7 +279,7 @@ export function BulkPhotoImport({
       ) : null}
 
       {phase === "done" ? (
-        <div className="mt-6 rounded-[2px] border border-rule bg-card p-4">
+        <div className="mt-6 rounded-card border border-rule bg-card p-4">
           <h2 className="font-display text-lg font-bold text-ink">
             Imported {imported} {imported === 1 ? "recipe" : "recipes"}
             {failed.length > 0 ? `, ${failed.length} failed` : ""}

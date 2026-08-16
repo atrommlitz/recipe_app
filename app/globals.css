@@ -44,6 +44,11 @@
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Two radii, so corners stay consistent: controls you press, and surfaces
+     that hold content. Change them here, not at the call site. */
+  --radius-ui: 0.625rem; /* buttons, inputs, chips, toggles */
+  --radius-card: 0.875rem; /* cards, photos, panels, sheets */
 }
 
 @layer base {

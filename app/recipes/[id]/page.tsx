@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
 import { CookLog } from "@/components/CookLog"
+import { CoverButton } from "@/components/CoverButton"
 import { MethodBadge } from "@/components/MethodChip"
 import { RecipeScaler } from "@/components/RecipeScaler"
 import { createClient } from "@/lib/supabase/server"
@@ -107,6 +108,7 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
             >
               Edit
             </Link>
+            <CoverButton recipeId={recipe.id} />
             {recipe.source_url ? (
               <a
                 href={recipe.source_url}

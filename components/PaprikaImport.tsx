@@ -202,7 +202,7 @@ export function PaprikaImport({
       </div>
 
       {busy ? (
-        <div className="mt-6 border border-rule bg-card p-4 rounded-[2px]">
+        <div className="mt-6 border border-rule bg-card p-4 rounded-card">
           <p className="tnum text-sm text-ink">{phaseLabel[phase]}</p>
           {progress.total > 0 ? (
             <div className="mt-2 h-1 w-full bg-ground">
@@ -225,7 +225,7 @@ export function PaprikaImport({
       ) : null}
 
       {phase === "done" ? (
-        <div className="mt-6 border border-rule bg-card p-4 rounded-[2px]">
+        <div className="mt-6 border border-rule bg-card p-4 rounded-card">
           <h2 className="font-display text-lg font-bold text-ink">
             Imported {imported} {imported === 1 ? "recipe" : "recipes"}
             {failed.length > 0 ? `, ${failed.length} failed` : ""}

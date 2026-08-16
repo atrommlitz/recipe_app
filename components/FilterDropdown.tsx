@@ -83,7 +83,7 @@ export function FilterDropdown({
         aria-haspopup="true"
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 rounded-[2px] border px-3 py-1.5 text-sm transition-colors ${
+        className={`flex items-center gap-2 rounded-ui border px-3 py-1.5 text-sm transition-colors ${
           active
             ? "border-accent bg-card text-ink"
             : "border-rule bg-card text-ink-mute hover:border-ink-mute hover:text-ink"
@@ -113,7 +113,7 @@ export function FilterDropdown({
           id={panelId}
           role="group"
           aria-label={label}
-          className="absolute top-full left-0 z-30 mt-1 min-w-[13rem] rounded-[2px] border border-rule bg-card py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+          className="absolute top-full left-0 z-30 mt-1 min-w-[13rem] rounded-card border border-rule bg-card py-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
         >
           {options.map((option) => {
             const checked = selected.has(option.value)

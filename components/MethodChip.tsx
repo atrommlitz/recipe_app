@@ -1,5 +1,5 @@
 const base =
-  "inline-flex items-center rounded-[2px] border px-2 py-1 font-mono text-[11px] " +
+  "inline-flex items-center rounded-ui border px-2 py-1 font-mono text-[11px] " +
   "uppercase tracking-[0.08em] transition-colors"
 
 /** Read-only tag shown on recipe cards and the detail view. */

@@ -80,7 +80,7 @@ export function PhotoImport({
     return (
       <div>
         <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
-          <div className="border border-rule bg-card p-3 rounded-[2px]">
+          <div className="border border-rule bg-card p-3 rounded-card">
             <p className="text-sm text-ink">
               <span className="eyebrow mr-2">Preview</span>
               Read off your {images.length === 1 ? "photo" : "photos"}. Handwriting and
@@ -120,7 +120,7 @@ export function PhotoImport({
             {images.map((image, index) => (
               <li
                 key={index}
-                className="relative overflow-hidden rounded-[2px] border border-rule"
+                className="relative overflow-hidden rounded-card border border-rule"
               >
                 {/* Local preview of a canvas-encoded data URL — next/image
                     would gain nothing here and can't optimise a data URL. */}
@@ -130,7 +130,7 @@ export function PhotoImport({
                   alt={`Page ${index + 1}`}
                   className="aspect-[3/4] w-full object-cover"
                 />
-                <span className="tnum absolute top-1 left-1 rounded-[2px] bg-ink/80 px-1.5 py-0.5 text-[10px] text-ground">
+                <span className="tnum absolute top-1 left-1 rounded-ui bg-ink/80 px-1.5 py-0.5 text-[10px] text-ground">
                   {index + 1}
                 </span>
                 <button
@@ -139,7 +139,7 @@ export function PhotoImport({
                     setImages((current) => current.filter((_, i) => i !== index))
                   }
                   aria-label={`Remove page ${index + 1}`}
-                  className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-[2px] bg-ink/80 text-ground"
+                  className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-ui bg-ink/80 text-ground"
                 >
                   ×
                 </button>

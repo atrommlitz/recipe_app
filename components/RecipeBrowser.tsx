@@ -385,7 +385,7 @@ export function RecipeBrowser({
           <div
             role="group"
             aria-label="Layout"
-            className="flex overflow-hidden rounded-[2px] border border-rule"
+            className="flex overflow-hidden rounded-ui border border-rule"
           >
             {(["grid", "list"] as const).map((mode) => (
               <button
@@ -421,7 +421,7 @@ export function RecipeBrowser({
       </div>
 
       {selecting && selected.size === 0 ? (
-        <p className="mb-4 rounded-[2px] border border-rule bg-card px-3 py-2 text-sm text-ink-mute">
+        <p className="mb-4 rounded-card border border-rule bg-card px-3 py-2 text-sm text-ink-mute">
           Tap recipes to select them.
         </p>
       ) : null}
