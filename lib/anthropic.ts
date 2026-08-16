@@ -75,6 +75,61 @@ export async function parseRecipeFromText(
   return parsed
 }
 
+const PHOTO_SYSTEM = `${RECIPE_SYSTEM}
+
+You are reading photographs: cookbook pages, handwritten recipe cards, printed
+clippings, or a phone screenshot. Additional rules for images:
+- Transcribe exactly what is written, including unusual or old-fashioned wording.
+- If several photos are supplied they are pages of ONE recipe, in order. Merge
+  them into a single recipe rather than returning the first one.
+- Ignore page furniture: headers, footers, page numbers, captions on unrelated
+  photos, and text belonging to a different recipe on the same page.
+- If a word is genuinely illegible, transcribe your best reading rather than
+  omitting the line, and mention the uncertainty in notes.`
+
+/** Extraction from photographs of a recipe — cookbook pages, cards, clippings. */
+export async function parseRecipeFromImages(
+  images: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" }[],
+): Promise<RecipeDraft> {
+  if (images.length === 0) throw new Error("No images supplied.")
+
+  const message = await client().messages.parse({
+    model: LINK_MODEL,
+    max_tokens: 16000,
+    system: PHOTO_SYSTEM,
+    output_config: {
+      format: zodOutputFormat(recipeDraftSchema),
+      effort: "high",
+    },
+    messages: [
+      {
+        role: "user",
+        content: [
+          ...images.map((image) => ({
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: image.mediaType,
+              data: image.base64,
+            },
+          })),
+          {
+            type: "text" as const,
+            text:
+              images.length > 1
+                ? `These ${images.length} photos are pages of a single recipe, in order. Extract it.`
+                : "Extract the recipe from this photo.",
+          },
+        ],
+      },
+    ],
+  })
+
+  const parsed = message.parsed_output
+  if (!parsed) throw new Error("Claude did not return a recipe.")
+  return parsed
+}
+
 const INGREDIENT_SYSTEM = `You split raw recipe ingredient lines into structured fields.
 
 Rules:

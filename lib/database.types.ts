@@ -15,6 +15,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      cook_log: {
+        Row: {
+          cooked_at: string
+          id: string
+          recipe_id: string | null
+        }
+        Insert: {
+          cooked_at?: string
+          id?: string
+          recipe_id?: string | null
+        }
+        Update: {
+          cooked_at?: string
+          id?: string
+          recipe_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cook_log_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_methods: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      recipe_cooking_methods: {
+        Row: {
+          cooking_method_id: string
+          recipe_id: string
+        }
+        Insert: {
+          cooking_method_id: string
+          recipe_id: string
+        }
+        Update: {
+          cooking_method_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_cooking_methods_cooking_method_id_fkey"
+            columns: ["cooking_method_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_cooking_methods_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           id: string
@@ -141,8 +215,15 @@ export type TablesUpdate<T extends keyof DefaultSchema["Tables"]> =
 export type Recipe = Tables<"recipes">
 export type Ingredient = Tables<"ingredients">
 export type Step = Tables<"steps">
+export type CookingMethod = Tables<"cooking_methods">
+export type CookLogEntry = Tables<"cook_log">
 
 export type RecipeWithRelations = Recipe & {
   ingredients: Ingredient[]
   steps: Step[]
+}
+
+/** A recipe as rendered on the grid: methods attached, no ingredients/steps. */
+export type RecipeCardData = Recipe & {
+  cooking_methods: CookingMethod[]
 }

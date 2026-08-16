@@ -1,8 +1,16 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { signOut } from "@/app/auth/actions"
 
 export function SiteHeader({ email }: { email: string }) {
+  const pathname = usePathname()
+
+  // Cook mode owns the whole screen — no nav chrome at the stove.
+  if (pathname?.endsWith("/cook")) return null
+
   return (
     <header className="border-b border-rule bg-ground">
       <div className="mx-auto flex max-w-5xl items-baseline gap-4 px-4 py-3 sm:px-6">
@@ -17,7 +25,7 @@ export function SiteHeader({ email }: { email: string }) {
           <Link href="/recipes/new" className="hover:text-accent">
             Add
           </Link>
-          <Link href="/import/link" className="hover:text-accent">
+          <Link href="/import/photo" className="hover:text-accent">
             Import
           </Link>
           <form action={signOut}>

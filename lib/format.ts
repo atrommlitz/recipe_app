@@ -132,6 +132,44 @@ export function formatMinutes(minutes: number | null | undefined): string {
   return `${hours} hr ${mins} min`
 }
 
+/**
+ * Relative date for the cook log: "Today", "Yesterday", "3 days ago",
+ * "2 weeks ago", "5 months ago". Deliberately coarse — nobody needs
+ * "13 days ago" to be distinguishable from "2 weeks ago" here.
+ */
+export function relativeDate(value: string | Date | null | undefined): string {
+  if (!value) return "Never"
+
+  const date = typeof value === "string" ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return "Never"
+
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000)
+
+  if (days < 0) return "Just now"
+  if (days === 0) return "Today"
+  if (days === 1) return "Yesterday"
+  if (days < 7) return `${days} days ago`
+  if (days < 14) return "Last week"
+  if (days < 60) return `${Math.round(days / 7)} weeks ago`
+  if (days < 365) return `${Math.round(days / 30)} months ago`
+
+  const years = Math.round(days / 365)
+  return years === 1 ? "A year ago" : `${years} years ago`
+}
+
+/** Absolute date for the cook log history list, e.g. "12 Mar 2026". */
+export function absoluteDate(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
 /** Total time across prep + cook, or "" when neither is recorded. */
 export function formatTotalTime(
   prep: number | null | undefined,

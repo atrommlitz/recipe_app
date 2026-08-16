@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 import { ImageUpload } from "@/components/ImageUpload"
+import { MethodToggle } from "@/components/MethodChip"
+import type { CookingMethod } from "@/lib/database.types"
 import {
   buttonDanger,
   buttonPrimary,
@@ -53,10 +55,12 @@ function numberOrNull(value: string): number | null {
 export function RecipeForm({
   recipeId,
   initial,
+  methods = [],
   submitLabel = "Save recipe",
 }: {
   recipeId?: string
   initial: EditableRecipe
+  methods?: CookingMethod[]
   submitLabel?: string
 }) {
   const router = useRouter()
@@ -73,6 +77,9 @@ export function RecipeForm({
     toIngredientRows(initial),
   )
   const [steps, setSteps] = useState<StepRow[]>(() => toStepRows(initial))
+  const [methodIds, setMethodIds] = useState<Set<string>>(
+    () => new Set(initial.cooking_method_ids ?? []),
+  )
 
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -94,6 +101,7 @@ export function RecipeForm({
         item: r.item,
       })),
       steps: steps.map((s) => s.text),
+      cooking_method_ids: [...methodIds],
     }
 
     startTransition(async () => {
@@ -175,6 +183,29 @@ export function RecipeForm({
             />
           </div>
         </div>
+
+        {methods.length > 0 ? (
+          <section>
+            <span className={labelClass}>How it&apos;s cooked</span>
+            <div className="flex flex-wrap gap-1.5">
+              {methods.map((method) => (
+                <MethodToggle
+                  key={method.id}
+                  name={method.name}
+                  selected={methodIds.has(method.id)}
+                  onToggle={() =>
+                    setMethodIds((current) => {
+                      const next = new Set(current)
+                      if (next.has(method.id)) next.delete(method.id)
+                      else next.add(method.id)
+                      return next
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Ingredients ---------------------------------------------------- */}
         <section>

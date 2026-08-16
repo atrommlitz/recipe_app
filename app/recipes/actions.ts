@@ -82,9 +82,53 @@ export async function saveRecipe(
     if (error) return { error: error.message }
   }
 
+  // Cooking methods: replace wholesale, same as ingredients and steps.
+  // Undefined means the caller doesn't manage methods (the importers), so
+  // leave whatever is there alone rather than clearing it.
+  if (recipe.cooking_method_ids !== undefined) {
+    await supabase.from("recipe_cooking_methods").delete().eq("recipe_id", recipeId)
+
+    if (recipe.cooking_method_ids.length > 0) {
+      const { error } = await supabase.from("recipe_cooking_methods").insert(
+        recipe.cooking_method_ids.map((cooking_method_id) => ({
+          recipe_id: recipeId,
+          cooking_method_id,
+        })),
+      )
+      if (error) return { error: error.message }
+    }
+  }
+
   revalidatePath("/")
   revalidatePath(`/recipes/${recipeId}`)
   return { id: recipeId }
+}
+
+/** Records that a recipe was made just now. */
+export async function markCooked(
+  recipeId: string,
+): Promise<{ error: string } | { ok: true }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("cook_log").insert({ recipe_id: recipeId })
+  if (error) return { error: error.message }
+
+  revalidatePath(`/recipes/${recipeId}`)
+  revalidatePath("/")
+  return { ok: true }
+}
+
+/** Removes a cook log entry — for the inevitable accidental tap. */
+export async function deleteCookLogEntry(
+  entryId: string,
+  recipeId: string,
+): Promise<{ error: string } | { ok: true }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("cook_log").delete().eq("id", entryId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/recipes/${recipeId}`)
+  revalidatePath("/")
+  return { ok: true }
 }
 
 export async function deleteRecipe(id: string): Promise<{ error: string } | void> {

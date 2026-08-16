@@ -3,10 +3,15 @@ import type { Metadata } from "next"
 
 import { RecipeForm } from "@/components/RecipeForm"
 import { createClient } from "@/lib/supabase/server"
+import { getCookingMethods } from "@/lib/queries"
 import type { EditableRecipe } from "@/lib/schemas"
-import type { Ingredient, Recipe, Step } from "@/lib/database.types"
+import type { CookingMethod, Ingredient, Recipe, Step } from "@/lib/database.types"
 
-type FullRecipe = Recipe & { ingredients: Ingredient[]; steps: Step[] }
+type FullRecipe = Recipe & {
+  ingredients: Ingredient[]
+  steps: Step[]
+  cooking_methods: CookingMethod[]
+}
 
 export const metadata: Metadata = { title: "Edit recipe" }
 
@@ -16,13 +21,16 @@ export default async function EditRecipePage({
   const { id } = await params
 
   const supabase = await createClient()
-  const { data } = await supabase
-    .from("recipes")
-    .select("*, ingredients(*), steps(*)")
-    .eq("id", id)
-    .order("sort_order", { referencedTable: "ingredients", ascending: true })
-    .order("step_number", { referencedTable: "steps", ascending: true })
-    .maybeSingle()
+  const [{ data }, methods] = await Promise.all([
+    supabase
+      .from("recipes")
+      .select("*, ingredients(*), steps(*), cooking_methods(id, name, sort_order)")
+      .eq("id", id)
+      .order("sort_order", { referencedTable: "ingredients", ascending: true })
+      .order("step_number", { referencedTable: "steps", ascending: true })
+      .maybeSingle(),
+    getCookingMethods(),
+  ])
 
   const recipe = data as FullRecipe | null
   if (!recipe) notFound()
@@ -41,7 +49,15 @@ export default async function EditRecipePage({
       item: i.item,
     })),
     steps: recipe.steps.map((s) => s.instruction),
+    cooking_method_ids: recipe.cooking_methods.map((m) => m.id),
   }
 
-  return <RecipeForm recipeId={recipe.id} initial={initial} submitLabel="Save changes" />
+  return (
+    <RecipeForm
+      recipeId={recipe.id}
+      initial={initial}
+      methods={methods}
+      submitLabel="Save changes"
+    />
+  )
 }

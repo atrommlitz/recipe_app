@@ -3,21 +3,37 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
+import { CookLog } from "@/components/CookLog"
+import { MethodBadge } from "@/components/MethodChip"
 import { RecipeScaler } from "@/components/RecipeScaler"
 import { createClient } from "@/lib/supabase/server"
 import { formatMinutes } from "@/lib/format"
-import type { Ingredient, Recipe, Step } from "@/lib/database.types"
+import type {
+  CookLogEntry,
+  CookingMethod,
+  Ingredient,
+  Recipe,
+  Step,
+} from "@/lib/database.types"
 
-type FullRecipe = Recipe & { ingredients: Ingredient[]; steps: Step[] }
+type FullRecipe = Recipe & {
+  ingredients: Ingredient[]
+  steps: Step[]
+  cooking_methods: CookingMethod[]
+  cook_log: CookLogEntry[]
+}
 
 async function getRecipe(id: string): Promise<FullRecipe | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from("recipes")
-    .select("*, ingredients(*), steps(*)")
+    .select(
+      "*, ingredients(*), steps(*), cooking_methods(id, name, sort_order), cook_log(*)",
+    )
     .eq("id", id)
     .order("sort_order", { referencedTable: "ingredients", ascending: true })
     .order("step_number", { referencedTable: "steps", ascending: true })
+    .order("cooked_at", { referencedTable: "cook_log", ascending: false })
     .maybeSingle()
 
   return (data as FullRecipe | null) ?? null
@@ -43,8 +59,12 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
     recipe.cook_time_minutes ? `${formatMinutes(recipe.cook_time_minutes)} cook` : null,
   ].filter(Boolean)
 
+  const methods = [...recipe.cooking_methods].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  )
+
   return (
-    <article className="pb-safe">
+    <article className="pb-28">
       {recipe.image_url ? (
         <div className="relative aspect-[16/10] w-full bg-card sm:aspect-[21/9]">
           <Image
@@ -68,8 +88,19 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
             <p className="tnum mt-2 text-xs text-ink-mute">{meta.join("  ·  ")}</p>
           ) : null}
 
+          {methods.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {methods.map((m) => (
+                <MethodBadge key={m.id} name={m.name} />
+              ))}
+            </div>
+          ) : null}
+
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <Link href={`/recipes/${recipe.id}/edit`} className="text-accent hover:underline">
+            <Link
+              href={`/recipes/${recipe.id}/edit`}
+              className="text-accent hover:underline"
+            >
               Edit
             </Link>
             {recipe.source_url ? (
@@ -86,7 +117,13 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
         </header>
 
         <div className="mt-8">
-          <RecipeScaler ingredients={recipe.ingredients} servings={recipe.servings} />
+          <RecipeScaler
+            recipeId={recipe.id}
+            title={recipe.title}
+            ingredients={recipe.ingredients}
+            servings={recipe.servings}
+            hasSteps={recipe.steps.length > 0}
+          />
         </div>
 
         {recipe.steps.length > 0 ? (
@@ -94,10 +131,7 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
             <h2 className="eyebrow !text-ink-mute mb-3">Method</h2>
             <ol className="border-t border-rule">
               {recipe.steps.map((step, index) => (
-                <li
-                  key={step.id}
-                  className="flex gap-4 border-b border-rule py-4"
-                >
+                <li key={step.id} className="flex gap-4 border-b border-rule py-4">
                   <span className="tnum shrink-0 pt-0.5 text-sm text-accent">
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -113,9 +147,13 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
         {recipe.notes ? (
           <section className="mt-10">
             <h2 className="eyebrow !text-ink-mute mb-3">Notes</h2>
-            <p className="whitespace-pre-wrap leading-relaxed text-ink">{recipe.notes}</p>
+            <p className="whitespace-pre-wrap leading-relaxed text-ink">
+              {recipe.notes}
+            </p>
           </section>
         ) : null}
+
+        <CookLog recipeId={recipe.id} entries={recipe.cook_log} />
       </div>
     </article>
   )

@@ -40,6 +40,12 @@ export type RecipeDraft = z.infer<typeof recipeDraftSchema>
 export type EditableRecipe = RecipeDraft & {
   image_url: string | null
   source_url: string | null
+  /**
+   * Optional so importers don't have to supply it — an imported recipe simply
+   * has no cooking methods until someone edits it. Undefined is treated as an
+   * empty list on save.
+   */
+  cooking_method_ids?: string[]
 }
 
 export const emptyRecipe: EditableRecipe = {
@@ -52,4 +58,5 @@ export const emptyRecipe: EditableRecipe = {
   notes: null,
   image_url: null,
   source_url: null,
+  cooking_method_ids: [],
 }
